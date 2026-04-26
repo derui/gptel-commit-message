@@ -1,5 +1,5 @@
 #+begin_quote
-This package generated almost by LLM. Design decision by author. You might avoid to use if hates LLM, or can not have trust of LLM.
+This package has generated almost by LLM. Design decision by author. You might avoid to use if hates LLM, or can not have trust of LLM.
 #+end_quote
 
 * Deadly simple commit message generator on `gptel`
