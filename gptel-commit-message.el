@@ -123,15 +123,14 @@ The function analyzes the git diff and sends it to the LLM to generate
          :prompt
          (concat
           gptel-commit-message-prompt
-          "\n\nGit diff:\n"
+          "\n\n---Git diff---\n"
           (gptel-commit-message--get-diff))
          :backend
          (or gptel-commit-message-backend
              gptel-backend
              (error "No gptel backend configured"))
          :buffer buffer
-         :position position)
-        t)
+         :position position))
     (error
      (gptel-commit-message--handle-error err))))
 
