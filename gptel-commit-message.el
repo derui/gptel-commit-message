@@ -57,8 +57,7 @@ Set to nil to generate messages for already committed changes."
   :type 'boolean
   :group 'gptel-commit-message)
 
-(defcustom gptel-commit-message-excluded-globs
-  '("*.lock" "*-lock.*")
+(defcustom gptel-commit-message-excluded-globs '("*.lock" "*-lock.*")
   "List of file globs to exclude from the diff sent to gptel.
 
 Each entry is converted to a git pathspec with `glob' and `exclude'
@@ -122,7 +121,7 @@ Replaces the entire buffer content with the generated commit message."
 
 Returns the diff as a string, respecting `gptel-commit-message-use-staged-changes'."
   (let* ((repo-root
-           (vc-git-root (or (buffer-file-name) default-directory)))
+          (vc-git-root (or (buffer-file-name) default-directory)))
          (diff-args (gptel-commit-message--diff-args))
          (raw-diff
           (with-temp-buffer
@@ -139,10 +138,10 @@ Returns the diff as a string, respecting `gptel-commit-message-use-staged-change
            '("diff" "HEAD~1" "HEAD"))))
     (if gptel-commit-message-excluded-globs
         (append
-         base-args
-         '("--" ".")
-         (mapcar #'gptel-commit-message--exclude-pathspec
-                 gptel-commit-message-excluded-globs))
+         base-args '("--" ".")
+         (mapcar
+          #'gptel-commit-message--exclude-pathspec
+          gptel-commit-message-excluded-globs))
       base-args)))
 
 (defun gptel-commit-message--exclude-pathspec (glob)
