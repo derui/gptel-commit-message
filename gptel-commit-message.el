@@ -155,16 +155,15 @@ Returns the diff as a string, respecting `gptel-commit-message-use-staged-change
           (gptel-stream t))
       (setq
        fsm
-       (gptel-request
-        prompt
-        :buffer (current-buffer)
-        :stream t
-        :callback
-        (lambda (response _info)
-          (pcase response
-            ((pred stringp) (push response chunks))
-            (`(reasoning . ,_) nil)
-            (_ nil))))))
+        (gptel-request
+         prompt
+         :buffer (current-buffer)
+         :stream t
+         :callback
+         (lambda (response info)
+           (setq chunks
+                 (gptel-commit-message--request-handler
+                  chunks response info))))))
     (while (not (memq (gptel-fsm-state fsm) '(DONE ERRS ABRT)))
       (accept-process-output nil 0.1))
     (if (eq (gptel-fsm-state fsm) 'DONE)
@@ -175,6 +174,15 @@ Returns the diff as a string, respecting `gptel-commit-message-use-staged-change
       (error "%s"
              (or (plist-get (gptel-fsm-info fsm) :status)
                  "gptel request failed")))))
+
+(defun gptel-commit-message--request-handler (chunks response _info)
+  "Update CHUNKS with streamed RESPONSE content.
+
+Responses containing reasoning or control messages are ignored."
+  (pcase response
+    ((pred stringp) (push response chunks))
+    (`(reasoning . ,_) chunks)
+    (_ chunks)))
 
 (defun gptel-commit-message--truncate-diff (diff)
   "Truncate DIFF if it exceeds `gptel-commit-message-max-diff-size'."
