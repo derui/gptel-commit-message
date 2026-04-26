@@ -349,7 +349,7 @@ Responses containing reasoning or control messages are ignored."
 
 (defun gptel-commit-message--release-state (state)
   "Release markers held by STATE."
-  (when-let ((timer (plist-get state :timer)))
+  (when-let* ((timer (plist-get state :timer)))
     (cancel-timer timer)
     (setf (plist-get state :timer) nil))
   (set-marker (plist-get state :start) nil)
