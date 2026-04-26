@@ -172,20 +172,20 @@ Respect `gptel-commit-message-use-staged-changes'."
  gptel-commit-message--request
  (&key prompt backend buffer position)
  "Send PROMPT to BACKEND for BUFFER at POSITION."
- (let ((state (gptel-commit-message--make-request-state position)))
-   (let ((gptel-backend backend)
-         (gptel-stream t))
-     (gptel-request
-      prompt
-      :buffer buffer
-      :stream t
-      :callback
-      (lambda (response info)
-        (setq state
-              (gptel-commit-message--request-handler
-               state response info))
-        (gptel-commit-message--handle-response
-         response info buffer state))))))
+ (let ((state (gptel-commit-message--make-request-state position))
+       (gptel-backend backend)
+       (gptel-stream t))
+   (gptel-request
+    prompt
+    :buffer buffer
+    :stream t
+    :callback
+    (lambda (response info)
+      (setq state
+            (gptel-commit-message--request-handler
+             state response info))
+      (gptel-commit-message--handle-response
+       response info buffer state)))))
 
 (defun gptel-commit-message--make-request-state (position)
   "Create request state beginning at POSITION."
@@ -249,7 +249,7 @@ Responses containing reasoning or control messages are ignored."
   "Finalize BUFFER contents using streamed STATE."
   (unwind-protect
       (let ((message
-             (gptel-commit-message--extract-message
+             (string-trim
               (apply #'concat (nreverse (plist-get state :chunks))))))
         (when (string-empty-p message)
           (error "gptel returned an empty response"))
@@ -260,30 +260,25 @@ Responses containing reasoning or control messages are ignored."
 
 (defun gptel-commit-message--replace-streamed-text (state message)
   "Replace text tracked by STATE with finalized MESSAGE."
-  (let ((start (plist-get state :start))
-        (end (plist-get state :end)))
-    (with-current-buffer (marker-buffer start)
+  (when-let* ((start (plist-get state :start))
+              (buf (marker-buffer start)))
+    (with-current-buffer buf
       (save-excursion
         (goto-char start)
-        (delete-region start end)
+        (delete-region start (plist-get state :end))
         (insert message)))))
 
 (defun gptel-commit-message--clear-streamed-text (state)
   "Delete any streamed text tracked by STATE."
-  (let ((start (plist-get state :start))
-        (end (plist-get state :end)))
-    (when (marker-buffer start)
-      (with-current-buffer (marker-buffer start)
-        (save-excursion (delete-region start end))))))
+  (when-let* ((start (plist-get state :start))
+              (buf (marker-buffer start)))
+    (with-current-buffer buf
+      (save-excursion (delete-region start (plist-get state :end))))))
 
 (defun gptel-commit-message--release-state (state)
   "Release markers held by STATE."
   (set-marker (plist-get state :start) nil)
   (set-marker (plist-get state :end) nil))
-
-(defun gptel-commit-message--extract-message (response)
-  "Normalize RESPONSE into a commit message string."
-  (string-trim response))
 
 (cl-defun
  gptel-commit-message--fail-request
