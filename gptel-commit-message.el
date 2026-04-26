@@ -25,7 +25,7 @@
   :group 'gptel
   :prefix "gptel-commit-message-")
 
-(defcustom gptel-commit-message-prompt
+(defconst gptel-commit-message--conventional-prompt
   "Analyze this git diff and generate a concise, well-formatted commit message following conventional commits. Return ONLY the commit message without any explanation or code blocks.
 
 RULES:
@@ -40,6 +40,10 @@ Use conventional commit message. Must prefix <type>: with follows:
 - ci :: changes for CI
 - build :: changes for build
 "
+  "Default prompt for generating conventional commit messages.")
+
+(defcustom gptel-commit-message-prompt
+  gptel-commit-message--conventional-prompt
   "The prompt template used to generate commit messages.
 This is sent to gptel along with the git diff."
   :type 'string
