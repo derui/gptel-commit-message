@@ -4,7 +4,7 @@
 
 ;; Author: Your Name <your.email@example.com>
 ;; Version: 0.1.0
-;; Package-Requires: ((emacs "27.1") (gptel "0.99"))
+;; Package-Requires: (gptel)
 ;; Keywords: tools, gptel, git
 ;; URL: https://github.com/derui/gptel-commit-message
 
