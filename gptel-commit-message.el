@@ -88,21 +88,6 @@ If nil, uses the current value of `gptel-backend'.")
 Public entrypoints set this when generation fails instead of
 signaling an error to callers.")
 
-(defvar gptel-commit-message--generation-indicator ["-" "\\" "|" "/"]
-  "Frames used to animate the generation indicator.")
-
-(defvar-local gptel-commit-message--generation-indicator-index 0
-  "Current frame index for the generation indicator.")
-
-(defvar-local gptel-commit-message--generation-indicator-timer nil
-  "Timer used to animate the generation indicator.")
-
-(defvar-local gptel-commit-message--generation-overlay nil
-  "Overlay used to display the in-buffer generation indicator.")
-
-(defvar-local gptel-commit-message--generation-read-only nil
-  "Saved value of `buffer-read-only' while generating a message.")
-
 ;;;###autoload
 (defun gptel-commit-message-generate ()
   "Generate a commit message for the current repository using gptel.
@@ -122,17 +107,13 @@ The function analyzes the git diff and sends it to the LLM to generate
               (or gptel-commit-message-backend
                   gptel-backend
                   (error "No gptel backend configured")))
-             (prompt
-              (concat
-               gptel-commit-message-prompt "\n\nGit diff:\n" diff)))
-        (setq gptel-commit-message-last-error nil)
-        (gptel-commit-message--start-generation-indicator
-         buffer position)
-        (gptel-commit-message--request prompt backend buffer position)
-        t)
+              (prompt
+               (concat
+                gptel-commit-message-prompt "\n\nGit diff:\n" diff)))
+         (setq gptel-commit-message-last-error nil)
+         (gptel-commit-message--request prompt backend buffer position)
+         t)
     (error
-     (gptel-commit-message--stop-generation-indicator
-      (current-buffer))
      (gptel-commit-message--handle-error err))))
 
 (defun gptel-commit-message--get-diff ()
@@ -194,13 +175,13 @@ Responses containing reasoning or control messages are ignored."
 
 (defun gptel-commit-message--handle-response
     (response info buffer position chunks)
-  "Handle streamed RESPONSE and INFO for BUFFER at POSITION using CHUNKS."
-  (condition-case err
-      (cond
-       ((not (buffer-live-p buffer))
-        (gptel-commit-message--stop-generation-indicator buffer))
-       ((stringp response)
-        nil)
+   "Handle streamed RESPONSE and INFO for BUFFER at POSITION using CHUNKS."
+   (condition-case err
+       (cond
+        ((not (buffer-live-p buffer))
+         nil)
+        ((stringp response)
+         nil)
        ((eq response t)
         (gptel-commit-message--finish-request buffer position chunks))
        ((eq response 'abort)
@@ -215,24 +196,20 @@ Responses containing reasoning or control messages are ignored."
       buffer (error-message-string err)))))
 
 (defun gptel-commit-message--finish-request (buffer position chunks)
-  "Insert CHUNKS into BUFFER at POSITION and clear generation state."
-  (unwind-protect
-      (let ((message
-             (gptel-commit-message--extract-message
-              (apply #'concat (nreverse chunks)))))
-        (when (string-empty-p message)
-          (error "gptel returned an empty response"))
-        (when (buffer-live-p buffer)
-          (with-current-buffer buffer
-            (save-excursion
-              (goto-char position)
-              (let ((inhibit-read-only t))
-                (insert message))))))
-    (gptel-commit-message--stop-generation-indicator buffer)))
+  "Insert CHUNKS into BUFFER at POSITION."
+  (let ((message
+         (gptel-commit-message--extract-message
+          (apply #'concat (nreverse chunks)))))
+    (when (string-empty-p message)
+      (error "gptel returned an empty response"))
+    (when (buffer-live-p buffer)
+      (with-current-buffer buffer
+        (save-excursion
+          (goto-char position)
+          (insert message))))))
 
 (defun gptel-commit-message--fail-request (buffer message)
   "Record MESSAGE as a request failure for BUFFER."
-  (gptel-commit-message--stop-generation-indicator buffer)
   (setq gptel-commit-message-last-error message)
   (message "gptel-commit-message: %s" message))
 
@@ -241,64 +218,6 @@ Responses containing reasoning or control messages are ignored."
   (setq gptel-commit-message-last-error (error-message-string err))
   (message "gptel-commit-message: %s" gptel-commit-message-last-error)
   nil)
-
-(defun gptel-commit-message--start-generation-indicator
-    (buffer position)
-  "Start displaying the generation animation indicator in BUFFER at POSITION."
-  (with-current-buffer buffer
-    (setq gptel-commit-message--generation-indicator-index 0)
-    (setq gptel-commit-message--generation-read-only buffer-read-only)
-    (setq buffer-read-only t)
-    (setq gptel-commit-message--generation-overlay
-          (make-overlay position position buffer nil t))
-    (overlay-put
-     gptel-commit-message--generation-overlay 'evaporate t))
-  (gptel-commit-message--update-generation-indicator buffer)
-  (setq gptel-commit-message--generation-indicator-timer
-        (run-with-timer
-         0.1 0.1 #'gptel-commit-message--advance-generation-indicator
-         buffer)))
-
-(defun gptel-commit-message--advance-generation-indicator (buffer)
-  "Advance the generation animation indicator by one frame in BUFFER."
-  (when (buffer-live-p buffer)
-    (with-current-buffer buffer
-      (setq gptel-commit-message--generation-indicator-index
-            (mod
-             (1+ gptel-commit-message--generation-indicator-index)
-             (length gptel-commit-message--generation-indicator)))
-      (gptel-commit-message--update-generation-indicator buffer))))
-
-(defun gptel-commit-message--update-generation-indicator (buffer)
-  "Display the current generation animation indicator frame in BUFFER."
-  (when (buffer-live-p buffer)
-    (with-current-buffer buffer
-      (when (overlayp gptel-commit-message--generation-overlay)
-        (overlay-put
-         gptel-commit-message--generation-overlay 'before-string
-         (propertize
-          (format "Generating commit message... %s"
-                  (aref
-                   gptel-commit-message--generation-indicator
-                   gptel-commit-message--generation-indicator-index))
-          'face 'shadow))))))
-
-(defun gptel-commit-message--stop-generation-indicator (buffer)
-  "Stop displaying the generation animation indicator in BUFFER."
-  (when (buffer-live-p buffer)
-    (with-current-buffer buffer
-      (when (timerp gptel-commit-message--generation-indicator-timer)
-        (cancel-timer
-         gptel-commit-message--generation-indicator-timer))
-      (setq gptel-commit-message--generation-indicator-timer nil)
-
-      (when (overlayp gptel-commit-message--generation-overlay)
-        (delete-overlay gptel-commit-message--generation-overlay))
-      (setq gptel-commit-message--generation-overlay nil)
-
-      (setq buffer-read-only
-            gptel-commit-message--generation-read-only)
-      (setq gptel-commit-message--generation-read-only nil))))
 
 (defun gptel-commit-message--truncate-diff (diff)
   "Truncate DIFF if it exceeds `gptel-commit-message-max-diff-size'."
