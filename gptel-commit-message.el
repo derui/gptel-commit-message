@@ -18,12 +18,18 @@
 ;;; Code:
 
 (require 'gptel)
+(require 'subr-x)
 (require 'vc-git)
 
 (defgroup gptel-commit-message nil
   "Generate git commit messages using gptel."
   :group 'gptel
   :prefix "gptel-commit-message-")
+
+(defface gptel-commit-message-streaming-face
+  '((t :inherit shadow))
+  "Face used for streamed text before generation completes."
+  :group 'gptel-commit-message)
 
 (defconst gptel-commit-message-conventional-prompt
   "Analyze this git diff and generate a concise, well-formatted commit message following conventional commits. Return ONLY the commit message without any explanation or code blocks.
@@ -152,7 +158,7 @@ Returns the diff as a string, respecting `gptel-commit-message-use-staged-change
 
 (defun gptel-commit-message--request (prompt backend buffer position)
   "Send PROMPT to BACKEND for BUFFER at POSITION."
-  (let ((chunks nil))
+  (let ((state (gptel-commit-message--make-request-state position)))
     (let ((gptel-backend backend)
           (gptel-stream t))
       (gptel-request
@@ -161,24 +167,43 @@ Returns the diff as a string, respecting `gptel-commit-message-use-staged-change
        :stream t
        :callback
        (lambda (response info)
-         (setq chunks
-               (gptel-commit-message--request-handler
-                chunks response info))
-         (gptel-commit-message--handle-response
-          response info buffer position chunks))))))
+          (setq state
+                (gptel-commit-message--request-handler
+                 state response info))
+          (gptel-commit-message--handle-response
+           response info buffer state))))))
 
-(defun gptel-commit-message--request-handler (chunks response _info)
-  "Update CHUNKS with streamed RESPONSE content.
+(defun gptel-commit-message--make-request-state (position)
+  "Create state for a streaming request beginning at POSITION."
+  (list :chunks nil
+        :start (copy-marker position)
+        :end (copy-marker position t)))
+
+(defun gptel-commit-message--request-handler (state response _info)
+  "Update STATE with streamed RESPONSE content.
 
 Responses containing reasoning or control messages are ignored."
   (pcase response
-    ((pred stringp) (push response chunks))
-    (`(reasoning . ,_) chunks)
-    (_ chunks)))
+    ((pred stringp) (gptel-commit-message--append-chunk state response))
+    (`(reasoning . ,_) state)
+    (_ state)))
+
+(defun gptel-commit-message--append-chunk (state chunk)
+  "Append CHUNK to STATE and insert it with a temporary face."
+  (let ((end (plist-get state :end)))
+    (when (marker-buffer end)
+      (with-current-buffer (marker-buffer end)
+        (save-excursion
+          (goto-char end)
+          (insert
+           (propertize
+            chunk
+            'font-lock-face 'gptel-commit-message-streaming-face)))))
+    (plist-put state :chunks (cons chunk (plist-get state :chunks)))))
 
 (defun gptel-commit-message--handle-response
-    (response info buffer position chunks)
-  "Handle streamed RESPONSE and INFO for BUFFER at POSITION using CHUNKS."
+    (response info buffer state)
+  "Handle streamed RESPONSE and INFO for BUFFER using STATE."
   (condition-case err
       (cond
        ((not (buffer-live-p buffer))
@@ -186,33 +211,66 @@ Responses containing reasoning or control messages are ignored."
        ((stringp response)
         nil)
        ((eq response t)
-        (gptel-commit-message--finish-request buffer position chunks))
+         (gptel-commit-message--finish-request buffer state))
        ((eq response 'abort)
-        (gptel-commit-message--fail-request
-         buffer "gptel request aborted"))
+         (gptel-commit-message--fail-request
+          buffer "gptel request aborted" state))
        ((null response)
-        (gptel-commit-message--fail-request
-         buffer
-         (or (plist-get info :status) "gptel request failed"))))
+         (gptel-commit-message--fail-request
+          buffer
+          (or (plist-get info :status) "gptel request failed")
+          state)))
     (error
      (gptel-commit-message--fail-request
-      buffer (error-message-string err)))))
+      buffer (error-message-string err) state))))
 
-(defun gptel-commit-message--finish-request (buffer position chunks)
-  "Insert CHUNKS into BUFFER at POSITION."
-  (let ((message
-         (gptel-commit-message--extract-message
-          (apply #'concat (nreverse chunks)))))
-    (when (string-empty-p message)
-      (error "gptel returned an empty response"))
-    (when (buffer-live-p buffer)
-      (with-current-buffer buffer
+(defun gptel-commit-message--finish-request (buffer state)
+  "Finalize BUFFER contents using streamed STATE."
+  (unwind-protect
+      (let ((message
+             (gptel-commit-message--extract-message
+              (apply #'concat (nreverse (plist-get state :chunks))))))
+        (when (string-empty-p message)
+          (error "gptel returned an empty response"))
+        (when (buffer-live-p buffer)
+          (gptel-commit-message--replace-streamed-text state message)))
+    (gptel-commit-message--release-state state)))
+
+(defun gptel-commit-message--replace-streamed-text (state message)
+  "Replace streamed text tracked by STATE with finalized MESSAGE."
+  (let ((start (plist-get state :start))
+        (end (plist-get state :end)))
+    (with-current-buffer (marker-buffer start)
+      (save-excursion
+        (goto-char start)
+        (delete-region start end)
+        (insert message)))))
+
+(defun gptel-commit-message--clear-streamed-text (state)
+  "Delete any streamed text tracked by STATE."
+  (let ((start (plist-get state :start))
+        (end (plist-get state :end)))
+    (when (marker-buffer start)
+      (with-current-buffer (marker-buffer start)
         (save-excursion
-          (goto-char position)
-          (insert message))))))
+          (delete-region start end))))))
 
-(defun gptel-commit-message--fail-request (buffer message)
-  "Record MESSAGE as a request failure for BUFFER."
+(defun gptel-commit-message--release-state (state)
+  "Release markers held by STATE."
+  (set-marker (plist-get state :start) nil)
+  (set-marker (plist-get state :end) nil))
+
+(defun gptel-commit-message--extract-message (response)
+  "Normalize RESPONSE into a commit message string."
+  (string-trim response))
+
+(defun gptel-commit-message--fail-request (buffer message &optional state)
+  "Record MESSAGE as a request failure for BUFFER and clear partial STATE."
+  (when state
+    (unwind-protect
+        (when (buffer-live-p buffer)
+          (gptel-commit-message--clear-streamed-text state))
+      (gptel-commit-message--release-state state)))
   (setq gptel-commit-message-last-error message)
   (message "gptel-commit-message: %s" message))
 
