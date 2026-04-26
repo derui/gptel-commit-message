@@ -44,8 +44,9 @@ This package integrates [[https://github.com/karthink/gptel][gptel]] with git to
 Generate a commit message and insert it into the current buffer at
 point. Internally it uses gptel's streaming request support
 asynchronously. While the response is streaming, partial text is
-inserted at point using a temporary face and then normalized once the
-request completes. If generation cannot be started, it returns nil and
+inserted at point using a temporary face, with an animated indicator at
+the end of the temporary text, and then normalized once the request
+completes. If generation cannot be started, it returns nil and
 stores the message in
 ~gptel-commit-message-last-error~.
 
@@ -122,7 +123,7 @@ repository root.
 1. **Fetch Diff**: Retrieves the git diff from staged changes (or committed changes if configured), excluding any matching globs
 2. **Truncate if Needed**: Respects size limits to avoid excessive API usage
 3. **Send to LLM**: Sends the diff and prompt through gptel's streaming request API
-4. **Preview**: Streams partial output into the current buffer using a temporary face
+4. **Preview**: Streams partial output into the current buffer using a temporary face and animated indicator
 5. **Finalize**: Replaces the preview with the finalized message when the request completes
 
 * Example Workflow
