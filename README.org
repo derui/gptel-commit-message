@@ -41,14 +41,14 @@ This package integrates [[https://github.com/karthink/gptel][gptel]] with git to
 
 *** ~gptel-commit-message-generate~
 
-Generate a commit message and return it synchronously. Internally it
-uses gptel's streaming request support and waits for the final result.
-If generation fails, it returns nil and stores the message in
+Generate a commit message and insert it into the current buffer at
+point. Internally it uses gptel's streaming request support and waits
+for the final result. If generation fails, it returns nil and stores
+the message in
 ~gptel-commit-message-last-error~.
 
 #+begin_src elisp
-(let ((message (gptel-commit-message-generate)))
-  (message "Generated: %s" message))
+(gptel-commit-message-generate)
 #+end_src
 
 ** Customization
@@ -121,7 +121,7 @@ repository root.
 2. **Truncate if Needed**: Respects size limits to avoid excessive API usage
 3. **Send to LLM**: Sends the diff and prompt through gptel's streaming request API
 4. **Extract Message**: Cleans up the response (removes markdown formatting, etc.)
-5. **Return**: Returns the generated message to the caller
+5. **Insert**: Inserts the generated message into the current buffer at point
 
 * Example Workflow
 
@@ -130,9 +130,7 @@ repository root.
 ;; $ git add src/feature.el
 
 ;; 2. In Emacs, call the command
-(let ((message (gptel-commit-message-generate)))
-  (when message
-    (message "%s" message)))
+(gptel-commit-message-generate)
 
 ;; 3. Review and commit
 ;; $ git commit -m "feat: add new feature based on user feedback"

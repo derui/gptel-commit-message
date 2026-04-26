@@ -80,14 +80,16 @@ signaling an error to callers.")
   "Generate a commit message for the current repository using gptel.
 
 The function analyzes the git diff and sends it to the LLM to generate
-a commit message. The message is generated synchronously without user
-interaction.
+a commit message. The generated message is inserted into the current
+buffer at point, synchronously and without user interaction.
 
-Returns nil if generation fails.  See
+Returns non-nil if generation succeeds, or nil if it fails.  See
 `gptel-commit-message-last-error' for details."
   (interactive)
   (condition-case err
-      (let* ((diff (gptel-commit-message--get-diff))
+      (let* ((buffer (current-buffer))
+             (position (point))
+             (diff (gptel-commit-message--get-diff))
              (backend
               (or gptel-commit-message-backend
                   gptel-backend
@@ -96,8 +98,13 @@ Returns nil if generation fails.  See
               (concat
                gptel-commit-message-prompt "\n\nGit diff:\n" diff)))
         (setq gptel-commit-message-last-error nil)
-        (gptel-commit-message--extract-message
-         (gptel-commit-message--request prompt backend)))
+        (with-current-buffer buffer
+          (save-excursion
+            (goto-char position)
+            (insert
+             (gptel-commit-message--extract-message
+              (gptel-commit-message--request prompt backend)))))
+        t)
     (error
      (gptel-commit-message--handle-error err))))
 
