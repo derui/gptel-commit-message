@@ -43,6 +43,8 @@ This package integrates [[https://github.com/karthink/gptel][gptel]] with git to
 
 Generate a commit message and return it synchronously. Internally it
 uses gptel's streaming request support and waits for the final result.
+If generation fails, it returns nil and stores the message in
+~gptel-commit-message-last-error~.
 
 #+begin_src elisp
 (let ((message (gptel-commit-message-generate)))
@@ -52,6 +54,7 @@ uses gptel's streaming request support and waits for the final result.
 *** ~gptel-commit-message-insert~
 
 Generate and insert a commit message at the current point.
+If generation fails, it leaves the buffer unchanged.
 
 #+begin_src elisp
 (gptel-commit-message-insert)
@@ -60,6 +63,7 @@ Generate and insert a commit message at the current point.
 *** ~gptel-commit-message-fill-buffer~
 
 Replace the entire buffer with a generated commit message. Useful in a commit message buffer or git hook.
+If generation fails, it leaves the buffer unchanged.
 
 #+begin_src elisp
 (gptel-commit-message-fill-buffer)

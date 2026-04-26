@@ -69,52 +69,79 @@ magic, so patterns are matched relative to the repository root."
   "The gptel backend used for generating commit messages.
 If nil, uses the current value of `gptel-backend'.")
 
+(defvar gptel-commit-message-last-error nil
+  "Last error message produced by gptel-commit-message.
+
+Public entrypoints set this when generation fails instead of
+signaling an error to callers.")
+
 ;;;###autoload
 (defun gptel-commit-message-generate ()
   "Generate a commit message for the current repository using gptel.
 
 The function analyzes the git diff and sends it to the LLM to generate
 a commit message. The message is generated synchronously without user
-interaction."
+interaction.
+
+Returns nil if generation fails.  See
+`gptel-commit-message-last-error' for details."
   (interactive)
-  (let* ((diff (gptel-commit-message--get-diff))
-         (backend
-           (or gptel-commit-message-backend
-               gptel-backend
-               (error "No gptel backend configured")))
-         (prompt
-          (concat
-           gptel-commit-message-prompt "\n\nGit diff:\n" diff)))
-    (gptel-commit-message--extract-message
-     (gptel-commit-message--request prompt backend))))
+  (condition-case err
+      (let* ((diff (gptel-commit-message--get-diff))
+             (backend
+              (or gptel-commit-message-backend
+                  gptel-backend
+                  (error "No gptel backend configured")))
+             (prompt
+              (concat
+               gptel-commit-message-prompt "\n\nGit diff:\n" diff)))
+        (setq gptel-commit-message-last-error nil)
+        (gptel-commit-message--extract-message
+         (gptel-commit-message--request prompt backend)))
+    (error
+     (gptel-commit-message--handle-error err))))
 
 ;;;###autoload
 (defun gptel-commit-message-insert (&optional buffer point)
   "Generate and insert a commit message at point.
 
 BUFFER and POINT default to current buffer and point.
-The generated message is inserted without any prompting."
+The generated message is inserted without any prompting.
+
+Returns nil if generation fails."
   (interactive)
-  (let* ((buf (or buffer (current-buffer)))
-         (pos
-          (or point
-              (with-current-buffer buf
-                (point))))
-         (message (gptel-commit-message-generate)))
-    (with-current-buffer buf
-      (goto-char pos)
-      (insert message))))
+  (condition-case err
+      (let* ((buf (or buffer (current-buffer)))
+             (pos
+              (or point
+                  (with-current-buffer buf
+                    (point))))
+             (message (gptel-commit-message-generate)))
+        (when message
+          (with-current-buffer buf
+            (goto-char pos)
+            (insert message))
+          message))
+    (error
+     (gptel-commit-message--handle-error err))))
 
 ;;;###autoload
 (defun gptel-commit-message-fill-buffer ()
   "Fill the current commit message buffer with a generated message.
 
 Useful in a `git commit` hook or when called from a commit message buffer.
-Replaces the entire buffer content with the generated commit message."
+Replaces the entire buffer content with the generated commit message.
+
+Returns nil if generation fails."
   (interactive)
-  (let ((message (gptel-commit-message-generate)))
-    (erase-buffer)
-    (insert message)))
+  (condition-case err
+      (let ((message (gptel-commit-message-generate)))
+        (when message
+          (erase-buffer)
+          (insert message)
+          message))
+    (error
+     (gptel-commit-message--handle-error err))))
 
 (defun gptel-commit-message--get-diff ()
   "Get the git diff for the current repository.
@@ -153,17 +180,16 @@ Returns the diff as a string, respecting `gptel-commit-message-use-staged-change
         (fsm nil))
     (let ((gptel-backend backend)
           (gptel-stream t))
-      (setq
-       fsm
-        (gptel-request
-         prompt
-         :buffer (current-buffer)
-         :stream t
-         :callback
-         (lambda (response info)
-           (setq chunks
-                 (gptel-commit-message--request-handler
-                  chunks response info))))))
+      (setq fsm
+            (gptel-request
+             prompt
+             :buffer (current-buffer)
+             :stream t
+             :callback
+             (lambda (response info)
+               (setq chunks
+                     (gptel-commit-message--request-handler
+                      chunks response info))))))
     (while (not (memq (gptel-fsm-state fsm) '(DONE ERRS ABRT)))
       (accept-process-output nil 0.1))
     (if (eq (gptel-fsm-state fsm) 'DONE)
@@ -183,6 +209,12 @@ Responses containing reasoning or control messages are ignored."
     ((pred stringp) (push response chunks))
     (`(reasoning . ,_) chunks)
     (_ chunks)))
+
+(defun gptel-commit-message--handle-error (err)
+  "Record and report ERR, then return nil."
+  (setq gptel-commit-message-last-error (error-message-string err))
+  (message "gptel-commit-message: %s"
+           gptel-commit-message-last-error))
 
 (defun gptel-commit-message--truncate-diff (diff)
   "Truncate DIFF if it exceeds `gptel-commit-message-max-diff-size'."
