@@ -1,10 +1,13 @@
-# gptel-commit-message
+#+TITLE: gptel-commit-message
+#+AUTHOR: Your Name
+#+EMAIL: your.email@example.com
+#+STARTUP: showall
 
 Generate git commit messages automatically using gptel, the LLM endpoint utility for Emacs.
 
-This package integrates [gptel](https://github.com/karthink/gptel) with git to automatically generate meaningful commit messages based on the staged changes (diff) without requiring user interaction.
+This package integrates [[https://github.com/karthink/gptel][gptel]] with git to automatically generate meaningful commit messages based on the staged changes (diff) without requiring user interaction.
 
-## Features
+* Features
 
 - 🤖 Automatic commit message generation from git diffs
 - 🚀 Zero-prompt interface - generates messages without user interaction
@@ -13,33 +16,33 @@ This package integrates [gptel](https://github.com/karthink/gptel) with git to a
 - 🔄 Support for both staged changes and committed diffs
 - ✨ Follows conventional commits format
 
-## Installation
+* Installation
 
-### Manual
+** Manual
 
-1. Clone this repository or download `gptel-commit-message.el`
+1. Clone this repository or download ~gptel-commit-message.el~
 2. Add to your Emacs configuration:
 
-```elisp
+#+begin_src elisp
 (use-package gptel-commit-message
   :load-path "/path/to/gptel-commit-message"
   :after gptel)
-```
+#+end_src
 
-### Requirements
+** Requirements
 
 - Emacs 27.1 or later
-- [gptel](https://github.com/karthink/gptel) - must be installed and configured
+- [[https://github.com/karthink/gptel][gptel]] - must be installed and configured
 
-## Usage
+* Usage
 
-### Interactive Commands
+** Interactive Commands
 
-#### `gptel-commit-message-generate`
+*** ~gptel-commit-message-generate~
 
 Generate a commit message and return it. Can be called with a callback for async operation.
 
-```elisp
+#+begin_src elisp
 ;; Sync call
 (let ((message (gptel-commit-message-generate)))
   (message "Generated: %s" message))
@@ -48,81 +51,81 @@ Generate a commit message and return it. Can be called with a callback for async
 (gptel-commit-message-generate
   (lambda (message)
     (message "Generated: %s" message)))
-```
+#+end_src
 
-#### `gptel-commit-message-insert`
+*** ~gptel-commit-message-insert~
 
 Generate and insert a commit message at the current point.
 
-```elisp
+#+begin_src elisp
 (gptel-commit-message-insert)
-```
+#+end_src
 
-#### `gptel-commit-message-fill-buffer`
+*** ~gptel-commit-message-fill-buffer~
 
 Replace the entire buffer with a generated commit message. Useful in a commit message buffer or git hook.
 
-```elisp
+#+begin_src elisp
 (gptel-commit-message-fill-buffer)
-```
+#+end_src
 
-### Git Hook Integration
+** Git Hook Integration
 
-Use in a `prepare-commit-msg` hook to automatically generate commit messages:
+Use in a ~prepare-commit-msg~ hook to automatically generate commit messages:
 
-```bash
+#+begin_src bash
 #!/bin/bash
 # .git/hooks/prepare-commit-msg
 
 emacs --batch -l ~/.emacs.d/init.el \
   --eval '(gptel-commit-message-fill-buffer)' \
   "$1"
-```
+#+end_src
 
-### Customization
+** Customization
 
-#### `gptel-commit-message-prompt`
+*** ~gptel-commit-message-prompt~
 
 Customize the prompt sent to the LLM:
 
-```elisp
+#+begin_src elisp
 (setq gptel-commit-message-prompt
       "Generate a concise git commit message following conventional commits format. 
        Consider the changes and write ONLY the commit message.")
-```
+#+end_src
 
-#### `gptel-commit-message-max-diff-size`
+*** ~gptel-commit-message-max-diff-size~
 
 Limit diff size to manage API costs (default: 50000 characters):
 
-```elisp
+#+begin_src elisp
 (setq gptel-commit-message-max-diff-size 30000)
-```
+#+end_src
 
-#### `gptel-commit-message-use-staged-changes`
+*** ~gptel-commit-message-use-staged-changes~
 
 Use staged changes (default: t) or already-committed changes:
 
-```elisp
+#+begin_src elisp
 ;; Use staged changes
 (setq gptel-commit-message-use-staged-changes t)
 
 ;; Use HEAD~1..HEAD instead
 (setq gptel-commit-message-use-staged-changes nil)
-```
+#+end_src
 
-#### `gptel-commit-message-backend`
+*** ~gptel-commit-message-backend~
 
-Specify a particular gptel backend (optional). If not set, uses `gptel-default-model`:
+Specify a particular gptel backend (optional). If not set, uses ~gptel-default-model~:
 
-```elisp
+#+begin_src elisp
 (setq gptel-commit-message-backend
       (gptel-make-openai "ChatGPT"
         :key "your-api-key"
         :models '(gpt-4)))
-```
+#+end_src
 
-## How It Works
+* How It Works
 
 1. **Fetch Diff**: Retrieves the git diff from staged changes (or committed changes if configured)
 2. **Truncate if Needed**: Respects size limits to avoid excessive API usage
@@ -130,9 +133,9 @@ Specify a particular gptel backend (optional). If not set, uses `gptel-default-m
 4. **Extract Message**: Cleans up the response (removes markdown formatting, etc.)
 5. **Return/Insert**: Either returns the message, inserts it at point, or fills the buffer
 
-## Example Workflow
+* Example Workflow
 
-```elisp
+#+begin_src elisp
 ;; 1. Stage your changes
 ;; $ git add src/feature.el
 
@@ -144,42 +147,42 @@ Specify a particular gptel backend (optional). If not set, uses `gptel-default-m
 
 ;; 4. Review and commit
 ;; $ git commit -m "feat: add new feature based on user feedback"
-```
+#+end_src
 
-## Troubleshooting
+* Troubleshooting
 
-### "No gptel backend configured"
+** "No gptel backend configured"
 
 Ensure gptel is installed and configured:
 
-```elisp
+#+begin_src elisp
 (use-package gptel
   :config
   (setq gptel-model "gpt-4"
         gptel-default-model "gpt-4"))
-```
+#+end_src
 
-### Large diffs being truncated
+** Large diffs being truncated
 
 Adjust the limit:
 
-```elisp
+#+begin_src elisp
 (setq gptel-commit-message-max-diff-size 100000)
-```
+#+end_src
 
-### Generated messages are too verbose
+** Generated messages are too verbose
 
 Customize the prompt:
 
-```elisp
+#+begin_src elisp
 (setq gptel-commit-message-prompt
       "Generate a VERY SHORT commit message (max 50 chars). Format: type: subject")
-```
+#+end_src
 
-## License
+* License
 
 See LICENSE file for details.
 
-## Contributing
+* Contributing
 
 Contributions are welcome! Please submit issues or pull requests.
