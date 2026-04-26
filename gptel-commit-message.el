@@ -26,7 +26,20 @@
   :prefix "gptel-commit-message-")
 
 (defcustom gptel-commit-message-prompt
-  "Analyze this git diff and generate a concise, well-formatted commit message following conventional commits. Return ONLY the commit message without any explanation or code blocks."
+  "Analyze this git diff and generate a concise, well-formatted commit message following conventional commits. Return ONLY the commit message without any explanation or code blocks.
+
+RULES:
+Use conventional commit message. Must prefix <type>: with follows:
+
+- feat :: making feature
+- fix :: fix some bug
+- perf :: performance concerns
+- refactor :: change design, or architecture
+- docs :: changes only document
+- chore :: some works not in category
+- ci :: changes for CI
+- build :: changes for build
+"
   "The prompt template used to generate commit messages.
 This is sent to gptel along with the git diff."
   :type 'string
