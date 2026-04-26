@@ -75,6 +75,16 @@ If nil, uses the current value of `gptel-backend'.")
 Public entrypoints set this when generation fails instead of
 signaling an error to callers.")
 
+(defvar gptel-commit-message--generation-indicator
+  ["-" "\\" "|" "/"]
+  "Frames used to animate the generation indicator.")
+
+(defvar gptel-commit-message--generation-indicator-index 0
+  "Current frame index for the generation indicator.")
+
+(defvar gptel-commit-message--generation-indicator-timer nil
+  "Timer used to animate the generation indicator.")
+
 ;;;###autoload
 (defun gptel-commit-message-generate ()
   "Generate a commit message for the current repository using gptel.
@@ -150,21 +160,25 @@ Returns the diff as a string, respecting `gptel-commit-message-use-staged-change
              prompt
              :buffer (current-buffer)
              :stream t
-             :callback
-             (lambda (response info)
-               (setq chunks
-                     (gptel-commit-message--request-handler
-                      chunks response info))))))
-    (while (not (memq (gptel-fsm-state fsm) '(DONE ERRS ABRT)))
-      (accept-process-output nil 0.1))
-    (if (eq (gptel-fsm-state fsm) 'DONE)
-        (let ((response (apply #'concat (nreverse chunks))))
-          (if (string-empty-p response)
-              (error "gptel returned an empty response")
-            response))
-      (error "%s"
-             (or (plist-get (gptel-fsm-info fsm) :status)
-                 "gptel request failed")))))
+              :callback
+              (lambda (response info)
+                (setq chunks
+                      (gptel-commit-message--request-handler
+                       chunks response info))))))
+    (unwind-protect
+        (progn
+          (gptel-commit-message--start-generation-indicator)
+          (while (not (memq (gptel-fsm-state fsm) '(DONE ERRS ABRT)))
+            (accept-process-output nil 0.1))
+          (if (eq (gptel-fsm-state fsm) 'DONE)
+              (let ((response (apply #'concat (nreverse chunks))))
+                (if (string-empty-p response)
+                    (error "gptel returned an empty response")
+                  response))
+            (error "%s"
+                   (or (plist-get (gptel-fsm-info fsm) :status)
+                       "gptel request failed"))))
+      (gptel-commit-message--stop-generation-indicator))))
 
 (defun gptel-commit-message--request-handler (chunks response _info)
   "Update CHUNKS with streamed RESPONSE content.
@@ -180,6 +194,37 @@ Responses containing reasoning or control messages are ignored."
   (setq gptel-commit-message-last-error (error-message-string err))
   (message "gptel-commit-message: %s"
            gptel-commit-message-last-error))
+
+(defun gptel-commit-message--start-generation-indicator ()
+  "Start displaying the generation animation indicator."
+  (setq gptel-commit-message--generation-indicator-index 0)
+  (gptel-commit-message--update-generation-indicator)
+  (setq
+   gptel-commit-message--generation-indicator-timer
+   (run-with-timer 0.1 0.1 #'gptel-commit-message--advance-generation-indicator)))
+
+(defun gptel-commit-message--advance-generation-indicator ()
+  "Advance the generation animation indicator by one frame."
+  (setq
+   gptel-commit-message--generation-indicator-index
+   (mod
+    (1+ gptel-commit-message--generation-indicator-index)
+    (length gptel-commit-message--generation-indicator)))
+  (gptel-commit-message--update-generation-indicator))
+
+(defun gptel-commit-message--update-generation-indicator ()
+  "Display the current generation animation indicator frame."
+  (message
+   "gptel-commit-message: generating %s"
+   (aref gptel-commit-message--generation-indicator
+         gptel-commit-message--generation-indicator-index)))
+
+(defun gptel-commit-message--stop-generation-indicator ()
+  "Stop displaying the generation animation indicator."
+  (when (timerp gptel-commit-message--generation-indicator-timer)
+    (cancel-timer gptel-commit-message--generation-indicator-timer))
+  (setq gptel-commit-message--generation-indicator-timer nil)
+  (message ""))
 
 (defun gptel-commit-message--truncate-diff (diff)
   "Truncate DIFF if it exceeds `gptel-commit-message-max-diff-size'."
