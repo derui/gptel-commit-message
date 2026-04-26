@@ -26,18 +26,24 @@
   :group 'gptel
   :prefix "gptel-commit-message-")
 
-(defface gptel-commit-message-streaming-face
-  '((t :inherit shadow))
+(defface gptel-commit-message-streaming-face '((t :inherit shadow))
   "Face used for streamed text before generation completes."
   :group 'gptel-commit-message)
 
 (defconst gptel-commit-message-conventional-prompt
   "Analyze this git diff and generate a concise, well-formatted commit message following conventional commits. Return ONLY the commit message without any explanation or code blocks.
 
-The commit message must describe WHY the change come.
-
 FORMAT:
-Keep conventional message, description should be less than 50 charactors as possible.
+<format>
+[type]: {description}
+
+{commit body if necessary}
+
+{breaking change section}
+</format>
+
+- Description should be less than 50 charactors as possible.
+- Each line of commit message body should be less than 72 charactors each line as possible.
 
 RULES:
 Use conventional commit message. Must prefix <type>: with follows:
@@ -167,24 +173,26 @@ Returns the diff as a string, respecting `gptel-commit-message-use-staged-change
        :stream t
        :callback
        (lambda (response info)
-          (setq state
-                (gptel-commit-message--request-handler
-                 state response info))
-          (gptel-commit-message--handle-response
-           response info buffer state))))))
+         (setq state
+               (gptel-commit-message--request-handler
+                state response info))
+         (gptel-commit-message--handle-response
+          response info buffer state))))))
 
 (defun gptel-commit-message--make-request-state (position)
   "Create state for a streaming request beginning at POSITION."
-  (list :chunks nil
-        :start (copy-marker position)
-        :end (copy-marker position t)))
+  (list
+   :chunks nil
+   :start (copy-marker position)
+   :end (copy-marker position t)))
 
 (defun gptel-commit-message--request-handler (state response _info)
   "Update STATE with streamed RESPONSE content.
 
 Responses containing reasoning or control messages are ignored."
   (pcase response
-    ((pred stringp) (gptel-commit-message--append-chunk state response))
+    ((pred stringp)
+     (gptel-commit-message--append-chunk state response))
     (`(reasoning . ,_) state)
     (_ state)))
 
@@ -211,18 +219,21 @@ Responses containing reasoning or control messages are ignored."
        ((stringp response)
         nil)
        ((eq response t)
-         (gptel-commit-message--finish-request buffer state))
+        (gptel-commit-message--finish-request buffer state))
        ((eq response 'abort)
-         (gptel-commit-message--fail-request
-          buffer "gptel request aborted" state))
+        (gptel-commit-message--fail-request
+         buffer "gptel request aborted"
+         state))
        ((null response)
-         (gptel-commit-message--fail-request
-          buffer
-          (or (plist-get info :status) "gptel request failed")
-          state)))
+        (gptel-commit-message--fail-request buffer
+                                            (or
+                                             (plist-get info :status)
+                                             "gptel request failed")
+                                            state)))
     (error
      (gptel-commit-message--fail-request
-      buffer (error-message-string err) state))))
+      buffer (error-message-string err)
+      state))))
 
 (defun gptel-commit-message--finish-request (buffer state)
   "Finalize BUFFER contents using streamed STATE."
@@ -233,7 +244,8 @@ Responses containing reasoning or control messages are ignored."
         (when (string-empty-p message)
           (error "gptel returned an empty response"))
         (when (buffer-live-p buffer)
-          (gptel-commit-message--replace-streamed-text state message)))
+          (gptel-commit-message--replace-streamed-text
+           state message)))
     (gptel-commit-message--release-state state)))
 
 (defun gptel-commit-message--replace-streamed-text (state message)
@@ -252,8 +264,7 @@ Responses containing reasoning or control messages are ignored."
         (end (plist-get state :end)))
     (when (marker-buffer start)
       (with-current-buffer (marker-buffer start)
-        (save-excursion
-          (delete-region start end))))))
+        (save-excursion (delete-region start end))))))
 
 (defun gptel-commit-message--release-state (state)
   "Release markers held by STATE."
@@ -264,7 +275,8 @@ Responses containing reasoning or control messages are ignored."
   "Normalize RESPONSE into a commit message string."
   (string-trim response))
 
-(defun gptel-commit-message--fail-request (buffer message &optional state)
+(defun gptel-commit-message--fail-request
+    (buffer message &optional state)
   "Record MESSAGE as a request failure for BUFFER and clear partial STATE."
   (when state
     (unwind-protect
