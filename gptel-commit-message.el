@@ -134,7 +134,9 @@ The function analyzes the git diff and sends it to the LLM to generate
 (defun gptel-commit-message--get-diff ()
   "Get the git diff for the current repository.
 
-Returns the diff as a string, respecting `gptel-commit-message-use-staged-changes'."
+Return the diff as a string.
+
+Respect `gptel-commit-message-use-staged-changes'."
   (gptel-commit-message--truncate-diff
    (with-temp-buffer
      (apply #'vc-git-command
@@ -180,7 +182,7 @@ Returns the diff as a string, respecting `gptel-commit-message-use-staged-change
           response info buffer state))))))
 
 (defun gptel-commit-message--make-request-state (position)
-  "Create state for a streaming request beginning at POSITION."
+  "Create request state beginning at POSITION."
   (list
    :chunks nil
    :start (copy-marker position)
@@ -249,7 +251,7 @@ Responses containing reasoning or control messages are ignored."
     (gptel-commit-message--release-state state)))
 
 (defun gptel-commit-message--replace-streamed-text (state message)
-  "Replace streamed text tracked by STATE with finalized MESSAGE."
+  "Replace text tracked by STATE with finalized MESSAGE."
   (let ((start (plist-get state :start))
         (end (plist-get state :end)))
     (with-current-buffer (marker-buffer start)
@@ -277,7 +279,9 @@ Responses containing reasoning or control messages are ignored."
 
 (defun gptel-commit-message--fail-request
     (buffer message &optional state)
-  "Record MESSAGE as a request failure for BUFFER and clear partial STATE."
+  "Record MESSAGE as a request failure for BUFFER.
+
+Clear partial STATE when present."
   (when state
     (unwind-protect
         (when (buffer-live-p buffer)
