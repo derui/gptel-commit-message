@@ -43,8 +43,9 @@ This package integrates [[https://github.com/karthink/gptel][gptel]] with git to
 
 Generate a commit message and insert it into the current buffer at
 point. Internally it uses gptel's streaming request support and waits
-for the final result. If generation fails, it returns nil and stores
-the message in
+for the final result. While generating, the buffer is temporarily
+read-only and an in-buffer indicator is shown at point. If generation
+fails, it returns nil and stores the message in
 ~gptel-commit-message-last-error~.
 
 #+begin_src elisp
