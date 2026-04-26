@@ -168,23 +168,24 @@ Respect `gptel-commit-message-use-staged-changes'."
   "Convert GLOB into a git pathspec exclusion."
   (format ":(glob,exclude)%s" glob))
 
-(cl-defun gptel-commit-message--request
-    (&key prompt backend buffer position)
-  "Send PROMPT to BACKEND for BUFFER at POSITION."
-  (let ((state (gptel-commit-message--make-request-state position)))
-    (let ((gptel-backend backend)
-          (gptel-stream t))
-      (gptel-request
-       prompt
-       :buffer buffer
-       :stream t
-       :callback
-       (lambda (response info)
-         (setq state
-               (gptel-commit-message--request-handler
-                state response info))
-         (gptel-commit-message--handle-response
-          response info buffer state))))))
+(cl-defun
+ gptel-commit-message--request
+ (&key prompt backend buffer position)
+ "Send PROMPT to BACKEND for BUFFER at POSITION."
+ (let ((state (gptel-commit-message--make-request-state position)))
+   (let ((gptel-backend backend)
+         (gptel-stream t))
+     (gptel-request
+      prompt
+      :buffer buffer
+      :stream t
+      :callback
+      (lambda (response info)
+        (setq state
+              (gptel-commit-message--request-handler
+               state response info))
+        (gptel-commit-message--handle-response
+         response info buffer state))))))
 
 (defun gptel-commit-message--make-request-state (position)
   "Create request state beginning at POSITION."
@@ -229,18 +230,20 @@ Responses containing reasoning or control messages are ignored."
         (gptel-commit-message--finish-request buffer state))
        ((eq response 'abort)
         (gptel-commit-message--fail-request
-         buffer "gptel request aborted"
-         state))
+         :buffer buffer
+         :message "gptel request aborted"
+         :state state))
        ((null response)
-        (gptel-commit-message--fail-request buffer
-                                            (or
-                                             (plist-get info :status)
-                                             "gptel request failed")
-                                            state)))
+        (gptel-commit-message--fail-request
+         :buffer buffer
+         :message
+         (or (plist-get info :status) "gptel request failed")
+         :state state)))
     (error
      (gptel-commit-message--fail-request
-      buffer (error-message-string err)
-      state))))
+      :buffer buffer
+      :message (error-message-string err)
+      :state state))))
 
 (defun gptel-commit-message--finish-request (buffer state)
   "Finalize BUFFER contents using streamed STATE."
@@ -282,18 +285,19 @@ Responses containing reasoning or control messages are ignored."
   "Normalize RESPONSE into a commit message string."
   (string-trim response))
 
-(defun gptel-commit-message--fail-request
-    (buffer message &optional state)
-  "Record MESSAGE as a request failure for BUFFER.
+(cl-defun
+ gptel-commit-message--fail-request
+ (&key buffer message state)
+ "Record MESSAGE as a request failure for BUFFER.
 
 Clear partial STATE when present."
-  (when state
-    (unwind-protect
-        (when (buffer-live-p buffer)
-          (gptel-commit-message--clear-streamed-text state))
-      (gptel-commit-message--release-state state)))
-  (setq gptel-commit-message-last-error message)
-  (message "gptel-commit-message: %s" message))
+ (when state
+   (unwind-protect
+       (when (buffer-live-p buffer)
+         (gptel-commit-message--clear-streamed-text state))
+     (gptel-commit-message--release-state state)))
+ (setq gptel-commit-message-last-error message)
+ (message "gptel-commit-message: %s" message))
 
 (defun gptel-commit-message--handle-error (err)
   "Record and report ERR, then return nil."
