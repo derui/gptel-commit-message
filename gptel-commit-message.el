@@ -123,8 +123,7 @@ Returns non-nil if generation succeeds, or nil if it fails.  See
                   (progn
                     (gptel-commit-message--start-generation-indicator
                      buffer position)
-                    (gptel-commit-message--extract-message
-                     (gptel-commit-message--request prompt backend))))
+                    (gptel-commit-message--request prompt backend)))
           (gptel-commit-message--stop-generation-indicator buffer))
         (with-current-buffer buffer
           (save-excursion
@@ -268,16 +267,6 @@ Responses containing reasoning or control messages are ignored."
        (substring diff 0 gptel-commit-message-max-diff-size)
        "\n[... diff truncated ...]")
     diff))
-
-(defun gptel-commit-message--extract-message (response)
-  "Extract the commit message from RESPONSE.
-
-Removes common wrapper patterns like markdown code blocks."
-  (let ((trimmed (string-trim response)))
-    ;; Remove markdown code blocks if present
-    (if (string-match "^```.*?\n\\(\\(.\\|\n\\)*?\\)\n```$" trimmed)
-        (match-string 1 trimmed)
-      trimmed)))
 
 (provide 'gptel-commit-message)
 
