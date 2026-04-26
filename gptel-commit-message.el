@@ -35,7 +35,7 @@
   '("⣷" "⣯" "⣟" "⡿" "⢿" "⣻" "⣽" "⣾")
   "Frames used for the streaming generation indicator.")
 
-(defconst gptel-commit-message-generation-indicator-interval 0.1
+(defconst gptel-commit-message-indicator-interval 0.1
   "Seconds between animation frames for the generation indicator.")
 
 (defconst gptel-commit-message-conventional-prompt
@@ -302,8 +302,8 @@ Responses containing reasoning or control messages are ignored."
   (gptel-commit-message--render-indicator state)
   (setf (plist-get state :timer)
         (run-with-timer
-         gptel-commit-message-generation-indicator-interval
-         gptel-commit-message-generation-indicator-interval
+         gptel-commit-message-indicator-interval
+         gptel-commit-message-indicator-interval
          (lambda () (gptel-commit-message--tick-indicator state)))))
 
 (defun gptel-commit-message--tick-indicator (state)
