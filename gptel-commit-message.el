@@ -30,6 +30,9 @@
 
 The commit message must describe WHY the change come.
 
+FORMAT:
+Keep conventional message, description should be less than 50 charactors as possible.
+
 RULES:
 Use conventional commit message. Must prefix <type>: with follows:
 
@@ -107,12 +110,12 @@ The function analyzes the git diff and sends it to the LLM to generate
               (or gptel-commit-message-backend
                   gptel-backend
                   (error "No gptel backend configured")))
-              (prompt
-               (concat
-                gptel-commit-message-prompt "\n\nGit diff:\n" diff)))
-         (setq gptel-commit-message-last-error nil)
-         (gptel-commit-message--request prompt backend buffer position)
-         t)
+             (prompt
+              (concat
+               gptel-commit-message-prompt "\n\nGit diff:\n" diff)))
+        (setq gptel-commit-message-last-error nil)
+        (gptel-commit-message--request prompt backend buffer position)
+        t)
     (error
      (gptel-commit-message--handle-error err))))
 
@@ -175,13 +178,13 @@ Responses containing reasoning or control messages are ignored."
 
 (defun gptel-commit-message--handle-response
     (response info buffer position chunks)
-   "Handle streamed RESPONSE and INFO for BUFFER at POSITION using CHUNKS."
-   (condition-case err
-       (cond
-        ((not (buffer-live-p buffer))
-         nil)
-        ((stringp response)
-         nil)
+  "Handle streamed RESPONSE and INFO for BUFFER at POSITION using CHUNKS."
+  (condition-case err
+      (cond
+       ((not (buffer-live-p buffer))
+        nil)
+       ((stringp response)
+        nil)
        ((eq response t)
         (gptel-commit-message--finish-request buffer position chunks))
        ((eq response 'abort)
