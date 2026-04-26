@@ -62,14 +62,12 @@ Set to nil to generate messages for already committed changes."
 If nil, uses the current gptel-default-model.")
 
 ;;;###autoload
-(defun gptel-commit-message-generate (&optional callback)
+(defun gptel-commit-message-generate ()
   "Generate a commit message for the current repository using gptel.
 
-If CALLBACK is provided, it will be called with the generated message.
-Otherwise, returns the message as a string (blocking call).
-
 The function analyzes the git diff and sends it to the LLM to generate
-a commit message. The message is generated without user interaction."
+a commit message. The message is generated synchronously without user
+interaction."
   (interactive)
   (let* ((diff (gptel-commit-message--get-diff))
          (backend
@@ -79,18 +77,8 @@ a commit message. The message is generated without user interaction."
          (prompt
           (concat
            gptel-commit-message-prompt "\n\nGit diff:\n" diff)))
-
-    (if callback
-        (gptel-request
-         prompt
-         :backend backend
-         :callback
-         (lambda (response info)
-           (funcall
-            callback
-            (gptel-commit-message--extract-message response))))
-      (let ((response (gptel--sync-request prompt :backend backend)))
-        (gptel-commit-message--extract-message response)))))
+    (let ((response (gptel--sync-request prompt :backend backend)))
+      (gptel-commit-message--extract-message response))))
 
 ;;;###autoload
 (defun gptel-commit-message-insert (&optional buffer point)

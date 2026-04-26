@@ -40,17 +40,11 @@ This package integrates [[https://github.com/karthink/gptel][gptel]] with git to
 
 *** ~gptel-commit-message-generate~
 
-Generate a commit message and return it. Can be called with a callback for async operation.
+Generate a commit message and return it synchronously.
 
 #+begin_src elisp
-;; Sync call
 (let ((message (gptel-commit-message-generate)))
   (message "Generated: %s" message))
-
-;; Async call with callback
-(gptel-commit-message-generate
-  (lambda (message)
-    (message "Generated: %s" message)))
 #+end_src
 
 *** ~gptel-commit-message-insert~
