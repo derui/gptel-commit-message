@@ -28,7 +28,7 @@
 (defconst gptel-commit-message-conventional-prompt
   "Analyze this git diff and generate a concise, well-formatted commit message following conventional commits. Return ONLY the commit message without any explanation or code blocks.
 
-The commit message must describe WHY the change come. 
+The commit message must describe WHY the change come.
 
 RULES:
 Use conventional commit message. Must prefix <type>: with follows:
