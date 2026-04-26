@@ -57,6 +57,15 @@ Set to nil to generate messages for already committed changes."
   :type 'boolean
   :group 'gptel-commit-message)
 
+(defcustom gptel-commit-message-excluded-globs
+  '("*.lock" "*-lock.*")
+  "List of file globs to exclude from the diff sent to gptel.
+
+Each entry is converted to a git pathspec with `glob' and `exclude'
+magic, so patterns are matched relative to the repository root."
+  :type '(repeat string)
+  :group 'gptel-commit-message)
+
 (defvar gptel-commit-message-backend nil
   "The gptel backend used for generating commit messages.
 If nil, uses the current gptel-default-model.")
@@ -113,17 +122,32 @@ Replaces the entire buffer content with the generated commit message."
 
 Returns the diff as a string, respecting `gptel-commit-message-use-staged-changes'."
   (let* ((repo-root
-          (vc-git-root (or (buffer-file-name) default-directory)))
-         (diff-args
-          (if gptel-commit-message-use-staged-changes
-              '("diff" "--cached")
-            '("diff" "HEAD~1" "HEAD")))
+           (vc-git-root (or (buffer-file-name) default-directory)))
+         (diff-args (gptel-commit-message--diff-args))
          (raw-diff
           (with-temp-buffer
             (apply #'vc-git-command t nil repo-root diff-args)
             (buffer-string))))
 
     (gptel-commit-message--truncate-diff raw-diff)))
+
+(defun gptel-commit-message--diff-args ()
+  "Build git diff arguments for the current configuration."
+  (let ((base-args
+         (if gptel-commit-message-use-staged-changes
+             '("diff" "--cached")
+           '("diff" "HEAD~1" "HEAD"))))
+    (if gptel-commit-message-excluded-globs
+        (append
+         base-args
+         '("--" ".")
+         (mapcar #'gptel-commit-message--exclude-pathspec
+                 gptel-commit-message-excluded-globs))
+      base-args)))
+
+(defun gptel-commit-message--exclude-pathspec (glob)
+  "Convert GLOB into a git pathspec exclusion."
+  (format ":(glob,exclude)%s" glob))
 
 (defun gptel-commit-message--truncate-diff (diff)
   "Truncate DIFF if it exceeds `gptel-commit-message-max-diff-size'."

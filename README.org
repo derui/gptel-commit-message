@@ -14,6 +14,7 @@ This package integrates [[https://github.com/karthink/gptel][gptel]] with git to
 - 📏 Respects gptel configuration and model selection
 - 🛡️ Configurable diff size limits to manage API usage
 - 🔄 Support for both staged changes and committed diffs
+- 🙈 Exclude files from the diff with configurable globs
 - ✨ Follows conventional commits format
 
 * Installation
@@ -119,9 +120,29 @@ Specify a particular gptel backend (optional). If not set, uses ~gptel-default-m
         :models '(gpt-4)))
 #+end_src
 
+*** ~gptel-commit-message-excluded-globs~
+
+Exclude matching files from the diff sent to the LLM.
+The default value excludes common lockfiles:
+
+#+begin_src elisp
+(setq gptel-commit-message-excluded-globs
+      '("*.lock" "*-lock.*"))
+#+end_src
+
+Add more patterns by extending that list:
+
+#+begin_src elisp
+(setq gptel-commit-message-excluded-globs
+      '("*.lock" "*-lock.*" "dist/**" "vendor/**"))
+#+end_src
+
+Patterns are passed to git as glob pathspec exclusions relative to the
+repository root.
+
 * How It Works
 
-1. **Fetch Diff**: Retrieves the git diff from staged changes (or committed changes if configured)
+1. **Fetch Diff**: Retrieves the git diff from staged changes (or committed changes if configured), excluding any matching globs
 2. **Truncate if Needed**: Respects size limits to avoid excessive API usage
 3. **Send to LLM**: Sends the diff and prompt to gptel's configured backend
 4. **Extract Message**: Cleans up the response (removes markdown formatting, etc.)
