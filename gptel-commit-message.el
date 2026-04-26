@@ -17,6 +17,7 @@
 
 ;;; Code:
 
+(require 'cl-lib)
 (require 'gptel)
 (require 'subr-x)
 (require 'vc-git)
@@ -119,15 +120,17 @@ The function analyzes the git diff and sends it to the LLM to generate
              (position (copy-marker (point) t)))
         (setq gptel-commit-message-last-error nil)
         (gptel-commit-message--request
-
+         :prompt
          (concat
           gptel-commit-message-prompt
           "\n\nGit diff:\n"
           (gptel-commit-message--get-diff))
+         :backend
          (or gptel-commit-message-backend
              gptel-backend
              (error "No gptel backend configured"))
-         buffer position)
+         :buffer buffer
+         :position position)
         t)
     (error
      (gptel-commit-message--handle-error err))))
@@ -165,7 +168,8 @@ Respect `gptel-commit-message-use-staged-changes'."
   "Convert GLOB into a git pathspec exclusion."
   (format ":(glob,exclude)%s" glob))
 
-(defun gptel-commit-message--request (prompt backend buffer position)
+(cl-defun gptel-commit-message--request
+    (&key prompt backend buffer position)
   "Send PROMPT to BACKEND for BUFFER at POSITION."
   (let ((state (gptel-commit-message--make-request-state position)))
     (let ((gptel-backend backend)
