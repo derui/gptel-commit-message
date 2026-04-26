@@ -54,6 +54,8 @@ FORMAT:
 - Each line of commit message body should be less than 72 charactors each line as possible.
 
 RULES:
+Do not add too descriptive message. Each description and message should be simple as possible.
+
 Use conventional commit message. Must prefix <type>: with follows:
 
 - feat :: making feature
@@ -225,9 +227,9 @@ Responses containing reasoning or control messages are ignored."
         (gptel-commit-message--delete-indicator state)
         (goto-char content-end)
         (insert
-         (propertize
-          chunk
-          'font-lock-face 'gptel-commit-message-streaming-face))
+         (propertize chunk
+                     'font-lock-face
+                     'gptel-commit-message-streaming-face))
         (set-marker content-end (point) buf)
         (gptel-commit-message--render-indicator state))))
   (setf (plist-get state :chunks)
@@ -297,23 +299,20 @@ Responses containing reasoning or control messages are ignored."
 (defun gptel-commit-message--start-indicator (state)
   "Start the generation indicator for STATE."
   (gptel-commit-message--render-indicator state)
-  (setf
-   (plist-get state :timer)
-   (run-with-timer
-    gptel-commit-message-generation-indicator-interval
-    gptel-commit-message-generation-indicator-interval
-    (lambda ()
-      (gptel-commit-message--tick-indicator state)))))
+  (setf (plist-get state :timer)
+        (run-with-timer
+         gptel-commit-message-generation-indicator-interval
+         gptel-commit-message-generation-indicator-interval
+         (lambda () (gptel-commit-message--tick-indicator state)))))
 
 (defun gptel-commit-message--tick-indicator (state)
   "Advance and redraw the generation indicator for STATE."
   (when-let* ((content-end (plist-get state :content-end))
               (buf (marker-buffer content-end)))
-    (setf
-     (plist-get state :indicator-index)
-     (mod
-      (1+ (plist-get state :indicator-index))
-      (length gptel-commit-message-generation-indicator)))
+    (setf (plist-get state :indicator-index)
+          (mod
+           (1+ (plist-get state :indicator-index))
+           (length gptel-commit-message-generation-indicator)))
     (with-current-buffer buf
       (save-excursion
         (gptel-commit-message--render-indicator state)))))
@@ -327,9 +326,9 @@ Responses containing reasoning or control messages are ignored."
       (save-excursion
         (goto-char content-end)
         (insert
-         (propertize
-          (gptel-commit-message--indicator-frame state)
-          'font-lock-face 'gptel-commit-message-streaming-face))
+         (propertize (gptel-commit-message--indicator-frame state)
+                     'font-lock-face
+                     'gptel-commit-message-streaming-face))
         (set-marker (plist-get state :indicator-end) (point) buf)))))
 
 (defun gptel-commit-message--delete-indicator (state)
