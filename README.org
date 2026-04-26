@@ -1,23 +1,27 @@
-#+TITLE: gptel-commit-message
-#+AUTHOR: Your Name
-#+EMAIL: your.email@example.com
-#+STARTUP: showall
+#+begin_quote
+This package generated almost by LLM. Design decision by author. You might avoid to use if hates LLM, or can not have trust of LLM.
+#+end_quote
 
-Generate git commit messages automatically using gptel, the LLM endpoint utility for Emacs.
+* Deadly simple commit message generator on `gptel`
+Generate git commit messages automatically using [[https://github.com/karthink/gptel][gptel]].
 
 This package integrates [[https://github.com/karthink/gptel][gptel]] with git to automatically generate meaningful commit messages based on the staged changes (diff) without requiring user interaction.
 
 * Features
 
-- 🤖 Automatic commit message generation from git diffs
-- 🚀 Zero-prompt interface - generates messages without user interaction
-- 📏 Respects gptel configuration and model selection
-- 🛡️ Configurable diff size limits to manage API usage
-- 🔄 Support for both staged changes and committed diffs
-- 🙈 Exclude files from the diff with configurable globs
-- ✨ Follows conventional commits format
+- Automatic commit message generation from git diffs
+- Zero-prompt interface - generates messages minimum user interaction
+- Respects gptel configuration and model selection
+- Configurable diff size limits to manage API usage
+- Support for both staged changes and committed diffs
+- Exclude files from the diff with configurable globs
+- Follows conventional commits format
 
 * Installation
+- Emacs 30.1 or later
+  - Author uses bleeding edge emacs all day, sorry.
+- [[https://github.com/karthink/gptel][gptel]]
+  - must be installed and configured
 
 ** Manual
 
@@ -30,16 +34,25 @@ This package integrates [[https://github.com/karthink/gptel][gptel]] with git to
   :after gptel)
 #+end_src
 
-** Requirements
+** Using Package manager
+*Recommended way* . You can your favorite package manager.
 
-- Emacs 27.1 or later
-- [[https://github.com/karthink/gptel][gptel]] - must be installed and configured
+#+begin_src emacs-lisp
+  ;; elpaca
+  (elpaca
+   (gptel-commit-message
+    :type git
+    :host github
+    :repo "derui/gptel-commit-message"))
+#+end_src
+
+NOTE: Author uses only Elpaca, but you can use straight.el or package-vc-install.
 
 * Usage
 
 ** Interactive Commands
 
-*** ~gptel-commit-message-generate~
+*** =gptel-commit-message-generate=
 
 Generate a commit message and insert it into the current buffer at
 point. Internally it uses gptel's streaming request support
@@ -51,12 +64,17 @@ stores the message in
 ~gptel-commit-message-last-error~.
 
 #+begin_src elisp
-(gptel-commit-message-generate)
+  ;; just call it from M-x
+  (gptel-commit-message-generate)
+
+  ;; Or define keybinding for that.
+  (define-key
+   git-commit-mode-map "C-c g" #'gptel-commit-message-generate)
 #+end_src
 
 ** Customization
 
-*** ~gptel-commit-message-prompt~
+*** =gptel-commit-message-prompt=
 
 Customize the prompt sent to the LLM:
 
@@ -66,7 +84,7 @@ Customize the prompt sent to the LLM:
        Consider the changes and write ONLY the commit message.")
 #+end_src
 
-*** ~gptel-commit-message-max-diff-size~
+*** =gptel-commit-message-max-diff-size=
 
 Limit diff size to manage API costs (default: 50000 characters):
 
@@ -74,7 +92,7 @@ Limit diff size to manage API costs (default: 50000 characters):
 (setq gptel-commit-message-max-diff-size 30000)
 #+end_src
 
-*** ~gptel-commit-message-use-staged-changes~
+*** =gptel-commit-message-use-staged-changes=
 
 Use staged changes (default: t) or already-committed changes:
 
@@ -86,10 +104,9 @@ Use staged changes (default: t) or already-committed changes:
 (setq gptel-commit-message-use-staged-changes nil)
 #+end_src
 
-*** ~gptel-commit-message-backend~
+*** =gptel-commit-message-backend=
 
-Specify a particular gptel backend (optional). If not set, uses
-~gptel-backend~:
+Specify a particular gptel backend (optional). If not set, uses =gptel-backend=:
 
 #+begin_src elisp
 (setq gptel-commit-message-backend
@@ -98,7 +115,7 @@ Specify a particular gptel backend (optional). If not set, uses
         :models '(gpt-4)))
 #+end_src
 
-*** ~gptel-commit-message-excluded-globs~
+*** =gptel-commit-message-excluded-globs=
 
 Exclude matching files from the diff sent to the LLM.
 The default value excludes common lockfiles:
@@ -125,19 +142,6 @@ repository root.
 3. **Send to LLM**: Sends the diff and prompt through gptel's streaming request API
 4. **Preview**: Streams partial output into the current buffer using a temporary face and animated indicator
 5. **Finalize**: Replaces the preview with the finalized message when the request completes
-
-* Example Workflow
-
-#+begin_src elisp
-;; 1. Stage your changes
-;; $ git add src/feature.el
-
-;; 2. In Emacs, call the command
-(gptel-commit-message-generate)
-
-;; 3. Review and commit
-;; $ git commit -m "feat: add new feature based on user feedback"
-#+end_src
 
 * Troubleshooting
 
@@ -174,7 +178,3 @@ Customize the prompt:
 * License
 
 See LICENSE file for details.
-
-* Contributing
-
-Contributions are welcome! Please submit issues or pull requests.
