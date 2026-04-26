@@ -41,7 +41,8 @@ This package integrates [[https://github.com/karthink/gptel][gptel]] with git to
 
 *** ~gptel-commit-message-generate~
 
-Generate a commit message and return it synchronously.
+Generate a commit message and return it synchronously. Internally it
+uses gptel's streaming request support and waits for the final result.
 
 #+begin_src elisp
 (let ((message (gptel-commit-message-generate)))
@@ -111,7 +112,8 @@ Use staged changes (default: t) or already-committed changes:
 
 *** ~gptel-commit-message-backend~
 
-Specify a particular gptel backend (optional). If not set, uses ~gptel-default-model~:
+Specify a particular gptel backend (optional). If not set, uses
+~gptel-backend~:
 
 #+begin_src elisp
 (setq gptel-commit-message-backend
@@ -144,7 +146,7 @@ repository root.
 
 1. **Fetch Diff**: Retrieves the git diff from staged changes (or committed changes if configured), excluding any matching globs
 2. **Truncate if Needed**: Respects size limits to avoid excessive API usage
-3. **Send to LLM**: Sends the diff and prompt to gptel's configured backend
+3. **Send to LLM**: Sends the diff and prompt through gptel's streaming request API
 4. **Extract Message**: Cleans up the response (removes markdown formatting, etc.)
 5. **Return/Insert**: Either returns the message, inserts it at point, or fills the buffer
 
@@ -173,8 +175,10 @@ Ensure gptel is installed and configured:
 #+begin_src elisp
 (use-package gptel
   :config
-  (setq gptel-model "gpt-4"
-        gptel-default-model "gpt-4"))
+  (setq gptel-backend
+        (gptel-make-openai "ChatGPT"
+          :key gptel-api-key)
+        gptel-model 'gpt-4))
 #+end_src
 
 ** Large diffs being truncated

@@ -67,7 +67,7 @@ magic, so patterns are matched relative to the repository root."
 
 (defvar gptel-commit-message-backend nil
   "The gptel backend used for generating commit messages.
-If nil, uses the current gptel-default-model.")
+If nil, uses the current value of `gptel-backend'.")
 
 ;;;###autoload
 (defun gptel-commit-message-generate ()
@@ -79,14 +79,14 @@ interaction."
   (interactive)
   (let* ((diff (gptel-commit-message--get-diff))
          (backend
-          (or gptel-commit-message-backend
-              gptel-default-model
-              (error "No gptel backend configured")))
+           (or gptel-commit-message-backend
+               gptel-backend
+               (error "No gptel backend configured")))
          (prompt
           (concat
            gptel-commit-message-prompt "\n\nGit diff:\n" diff)))
-    (let ((response (gptel--sync-request prompt :backend backend)))
-      (gptel-commit-message--extract-message response))))
+    (gptel-commit-message--extract-message
+     (gptel-commit-message--request prompt backend))))
 
 ;;;###autoload
 (defun gptel-commit-message-insert (&optional buffer point)
@@ -146,6 +146,35 @@ Returns the diff as a string, respecting `gptel-commit-message-use-staged-change
 (defun gptel-commit-message--exclude-pathspec (glob)
   "Convert GLOB into a git pathspec exclusion."
   (format ":(glob,exclude)%s" glob))
+
+(defun gptel-commit-message--request (prompt backend)
+  "Send PROMPT to BACKEND with gptel streaming and return the response."
+  (let ((chunks nil)
+        (fsm nil))
+    (let ((gptel-backend backend)
+          (gptel-stream t))
+      (setq
+       fsm
+       (gptel-request
+        prompt
+        :buffer (current-buffer)
+        :stream t
+        :callback
+        (lambda (response _info)
+          (pcase response
+            ((pred stringp) (push response chunks))
+            (`(reasoning . ,_) nil)
+            (_ nil))))))
+    (while (not (memq (gptel-fsm-state fsm) '(DONE ERRS ABRT)))
+      (accept-process-output nil 0.1))
+    (if (eq (gptel-fsm-state fsm) 'DONE)
+        (let ((response (apply #'concat (nreverse chunks))))
+          (if (string-empty-p response)
+              (error "gptel returned an empty response")
+            response))
+      (error "%s"
+             (or (plist-get (gptel-fsm-info fsm) :status)
+                 "gptel request failed")))))
 
 (defun gptel-commit-message--truncate-diff (diff)
   "Truncate DIFF if it exceeds `gptel-commit-message-max-diff-size'."
