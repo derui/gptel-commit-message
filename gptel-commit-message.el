@@ -51,6 +51,7 @@ FORMAT:
 </format>
 
 - Description should be less than 50 charactors as possible.
+- Must not add \`.\` in descrpition.
 - Each line of commit message body should be less than 72 charactors each line as possible.
 
 RULES:
