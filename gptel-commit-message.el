@@ -116,17 +116,18 @@ The function analyzes the git diff and sends it to the LLM to generate
   (interactive)
   (condition-case err
       (let* ((buffer (current-buffer))
-             (position (copy-marker (point) t))
-             (diff (gptel-commit-message--get-diff))
-             (backend
-              (or gptel-commit-message-backend
-                  gptel-backend
-                  (error "No gptel backend configured")))
-             (prompt
-              (concat
-               gptel-commit-message-prompt "\n\nGit diff:\n" diff)))
+             (position (copy-marker (point) t)))
         (setq gptel-commit-message-last-error nil)
-        (gptel-commit-message--request prompt backend buffer position)
+        (gptel-commit-message--request
+
+         (concat
+          gptel-commit-message-prompt
+          "\n\nGit diff:\n"
+          (gptel-commit-message--get-diff))
+         (or gptel-commit-message-backend
+             gptel-backend
+             (error "No gptel backend configured"))
+         buffer position)
         t)
     (error
      (gptel-commit-message--handle-error err))))
