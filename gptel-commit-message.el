@@ -120,15 +120,14 @@ Replaces the entire buffer content with the generated commit message."
   "Get the git diff for the current repository.
 
 Returns the diff as a string, respecting `gptel-commit-message-use-staged-changes'."
-  (let* ((repo-root
-          (vc-git-root (or (buffer-file-name) default-directory)))
-         (diff-args (gptel-commit-message--diff-args))
-         (raw-diff
-          (with-temp-buffer
-            (apply #'vc-git-command t nil repo-root diff-args)
-            (buffer-string))))
-
-    (gptel-commit-message--truncate-diff raw-diff)))
+  (gptel-commit-message--truncate-diff
+   (with-temp-buffer
+     (apply #'vc-git-command
+            t
+            nil
+            (vc-git-root (or (buffer-file-name) default-directory))
+            (gptel-commit-message--diff-args))
+     (buffer-string))))
 
 (defun gptel-commit-message--diff-args ()
   "Build git diff arguments for the current configuration."
