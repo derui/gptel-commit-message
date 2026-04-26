@@ -4,7 +4,7 @@
 
 ;; Author: Your Name <your.email@example.com>
 ;; Version: 0.1.0
-;; Package-Requires: ((emacs "27.1") (gptel "0.1"))
+;; Package-Requires: ((emacs "27.1") (gptel "0.99"))
 ;; Keywords: tools, gptel, git
 ;; URL: https://github.com/derui/gptel-commit-message
 
@@ -12,8 +12,8 @@
 
 ;; This package integrates gptel with git to automatically generate
 ;; commit messages based on the staged changes (diff) without prompting
-;; the user. It uses the LLM endpoint configured in gptel to analyze
-;; the commit diff and create a meaningful commit message.
+;; the user. It uses gptel to analyze the commit diff
+;; and create a meaningful commit message.
 
 ;;; Code:
 
@@ -59,19 +59,25 @@ The function analyzes the git diff and sends it to the LLM to generate
 a commit message. The message is generated without user interaction."
   (interactive)
   (let* ((diff (gptel-commit-message--get-diff))
-         (backend (or gptel-commit-message-backend
-                      gptel-default-model
-                      (error "No gptel backend configured")))
-         (prompt (concat gptel-commit-message-prompt "\n\nGit diff:\n" diff)))
-    
+         (backend
+          (or gptel-commit-message-backend
+              gptel-default-model
+              (error "No gptel backend configured")))
+         (prompt
+          (concat
+           gptel-commit-message-prompt "\n\nGit diff:\n" diff)))
+
     (if callback
-        (gptel-request prompt
-          :backend backend
-          :callback (lambda (response info)
-                      (funcall callback
-                               (gptel-commit-message--extract-message response))))
-        (let ((response (gptel--sync-request prompt :backend backend)))
-          (gptel-commit-message--extract-message response)))))
+        (gptel-request
+         prompt
+         :backend backend
+         :callback
+         (lambda (response info)
+           (funcall
+            callback
+            (gptel-commit-message--extract-message response))))
+      (let ((response (gptel--sync-request prompt :backend backend)))
+        (gptel-commit-message--extract-message response)))))
 
 ;;;###autoload
 (defun gptel-commit-message-insert (&optional buffer point)
@@ -81,7 +87,10 @@ BUFFER and POINT default to current buffer and point.
 The generated message is inserted without any prompting."
   (interactive)
   (let* ((buf (or buffer (current-buffer)))
-         (pos (or point (with-current-buffer buf (point))))
+         (pos
+          (or point
+              (with-current-buffer buf
+                (point))))
          (message (gptel-commit-message-generate)))
     (with-current-buffer buf
       (goto-char pos)
@@ -102,22 +111,26 @@ Replaces the entire buffer content with the generated commit message."
   "Get the git diff for the current repository.
 
 Returns the diff as a string, respecting `gptel-commit-message-use-staged-changes'."
-  (let* ((repo-root (vc-git-root (or (buffer-file-name) default-directory)))
-         (diff-args (if gptel-commit-message-use-staged-changes
-                        '("diff" "--cached")
-                        '("diff" "HEAD~1" "HEAD")))
-         (raw-diff (with-temp-buffer
-                     (apply #'vc-git-command t nil repo-root diff-args)
-                     (buffer-string))))
-    
+  (let* ((repo-root
+          (vc-git-root (or (buffer-file-name) default-directory)))
+         (diff-args
+          (if gptel-commit-message-use-staged-changes
+              '("diff" "--cached")
+            '("diff" "HEAD~1" "HEAD")))
+         (raw-diff
+          (with-temp-buffer
+            (apply #'vc-git-command t nil repo-root diff-args)
+            (buffer-string))))
+
     (gptel-commit-message--truncate-diff raw-diff)))
 
 (defun gptel-commit-message--truncate-diff (diff)
   "Truncate DIFF if it exceeds `gptel-commit-message-max-diff-size'."
   (if (> (length diff) gptel-commit-message-max-diff-size)
-      (concat (substring diff 0 gptel-commit-message-max-diff-size)
-              "\n[... diff truncated ...]")
-      diff))
+      (concat
+       (substring diff 0 gptel-commit-message-max-diff-size)
+       "\n[... diff truncated ...]")
+    diff))
 
 (defun gptel-commit-message--extract-message (response)
   "Extract the commit message from RESPONSE.
@@ -127,7 +140,7 @@ Removes common wrapper patterns like markdown code blocks."
     ;; Remove markdown code blocks if present
     (if (string-match "^```.*?\n\\(\\(.\\|\n\\)*?\\)\n```$" trimmed)
         (match-string 1 trimmed)
-        trimmed)))
+      trimmed)))
 
 (provide 'gptel-commit-message)
 
