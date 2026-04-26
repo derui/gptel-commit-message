@@ -101,48 +101,6 @@ Returns nil if generation fails.  See
     (error
      (gptel-commit-message--handle-error err))))
 
-;;;###autoload
-(defun gptel-commit-message-insert (&optional buffer point)
-  "Generate and insert a commit message at point.
-
-BUFFER and POINT default to current buffer and point.
-The generated message is inserted without any prompting.
-
-Returns nil if generation fails."
-  (interactive)
-  (condition-case err
-      (let* ((buf (or buffer (current-buffer)))
-             (pos
-              (or point
-                  (with-current-buffer buf
-                    (point))))
-             (message (gptel-commit-message-generate)))
-        (when message
-          (with-current-buffer buf
-            (goto-char pos)
-            (insert message))
-          message))
-    (error
-     (gptel-commit-message--handle-error err))))
-
-;;;###autoload
-(defun gptel-commit-message-fill-buffer ()
-  "Fill the current commit message buffer with a generated message.
-
-Useful in a `git commit` hook or when called from a commit message buffer.
-Replaces the entire buffer content with the generated commit message.
-
-Returns nil if generation fails."
-  (interactive)
-  (condition-case err
-      (let ((message (gptel-commit-message-generate)))
-        (when message
-          (erase-buffer)
-          (insert message)
-          message))
-    (error
-     (gptel-commit-message--handle-error err))))
-
 (defun gptel-commit-message--get-diff ()
   "Get the git diff for the current repository.
 

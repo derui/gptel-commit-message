@@ -51,37 +51,6 @@ If generation fails, it returns nil and stores the message in
   (message "Generated: %s" message))
 #+end_src
 
-*** ~gptel-commit-message-insert~
-
-Generate and insert a commit message at the current point.
-If generation fails, it leaves the buffer unchanged.
-
-#+begin_src elisp
-(gptel-commit-message-insert)
-#+end_src
-
-*** ~gptel-commit-message-fill-buffer~
-
-Replace the entire buffer with a generated commit message. Useful in a commit message buffer or git hook.
-If generation fails, it leaves the buffer unchanged.
-
-#+begin_src elisp
-(gptel-commit-message-fill-buffer)
-#+end_src
-
-** Git Hook Integration
-
-Use in a ~prepare-commit-msg~ hook to automatically generate commit messages:
-
-#+begin_src bash
-#!/bin/bash
-# .git/hooks/prepare-commit-msg
-
-emacs --batch -l ~/.emacs.d/init.el \
-  --eval '(gptel-commit-message-fill-buffer)' \
-  "$1"
-#+end_src
-
 ** Customization
 
 *** ~gptel-commit-message-prompt~
@@ -152,7 +121,7 @@ repository root.
 2. **Truncate if Needed**: Respects size limits to avoid excessive API usage
 3. **Send to LLM**: Sends the diff and prompt through gptel's streaming request API
 4. **Extract Message**: Cleans up the response (removes markdown formatting, etc.)
-5. **Return/Insert**: Either returns the message, inserts it at point, or fills the buffer
+5. **Return**: Returns the generated message to the caller
 
 * Example Workflow
 
@@ -161,12 +130,11 @@ repository root.
 ;; $ git add src/feature.el
 
 ;; 2. In Emacs, call the command
-(call-interactively 'gptel-commit-message-insert)
+(let ((message (gptel-commit-message-generate)))
+  (when message
+    (message "%s" message)))
 
-;; 3. Or fill a commit message buffer
-(call-interactively 'gptel-commit-message-fill-buffer)
-
-;; 4. Review and commit
+;; 3. Review and commit
 ;; $ git commit -m "feat: add new feature based on user feedback"
 #+end_src
 
