@@ -56,6 +56,7 @@ FORMAT:
 
 RULES:
 Do not add too descriptive message. Each description and message should be simple as possible.
+DO NOT ANY OTHER OUTPUT WITHOUT FORMAT. No need to your thinking, prefix, suffix.
 
 Use conventional commit message. Must prefix <type>: with follows:
 
