@@ -107,13 +107,13 @@ Use staged changes (default: t) or already-committed changes:
 
 *** =gptel-commit-message-backend=
 
-Specify a particular gptel backend (optional). If not set, uses =gptel-backend=:
+Specify a particular gptel backend (optional). If not set, uses =gptel-backend= as default:
 
 #+begin_src elisp
 (setq gptel-commit-message-backend
       (gptel-make-openai "ChatGPT"
         :key "your-api-key"
-        :models '(gpt-4)))
+        :models '(gpt-5.6)))
 #+end_src
 
 *** =gptel-commit-message-excluded-globs=
@@ -156,7 +156,7 @@ Ensure gptel is installed and configured:
   (setq gptel-backend
         (gptel-make-openai "ChatGPT"
           :key gptel-api-key)
-        gptel-model 'gpt-4))
+        gptel-model 'gpt-5.6))
 #+end_src
 
 ** Large diffs being truncated
@@ -165,15 +165,6 @@ Adjust the limit:
 
 #+begin_src elisp
 (setq gptel-commit-message-max-diff-size 100000)
-#+end_src
-
-** Generated messages are too verbose
-
-Customize the prompt:
-
-#+begin_src elisp
-(setq gptel-commit-message-prompt
-      "Generate a VERY SHORT commit message (max 50 chars). Format: type: subject")
 #+end_src
 
 * License
