@@ -27,7 +27,8 @@
   :group 'gptel
   :prefix "gptel-commit-message-")
 
-(defface gptel-commit-message-streaming-face '((t :inherit shadow))
+(defface gptel-commit-message-streaming-face
+  '((t :inherit shadow))
   "Face used for streamed text before generation completes."
   :group 'gptel-commit-message)
 
@@ -97,7 +98,8 @@ Set to nil to generate messages for already committed changes."
   :type 'boolean
   :group 'gptel-commit-message)
 
-(defcustom gptel-commit-message-excluded-globs '("*.lock" "*-lock.*")
+(defcustom gptel-commit-message-excluded-globs
+  '("*.lock" "*-lock.*")
   "List of file globs to exclude from the diff sent to gptel.
 
 Each entry is converted to a git pathspec with `glob' and `exclude'
@@ -131,19 +133,16 @@ The function analyzes the git diff and sends it to the LLM to generate
              (position (copy-marker (point) t)))
         (setq gptel-commit-message-last-error nil)
         (gptel-commit-message--request
-         :prompt
-         (concat
-          gptel-commit-message-prompt
-          "\n\n---Git diff---\n"
-          (gptel-commit-message--get-diff))
-         :backend
-         (or gptel-commit-message-backend
-             gptel-backend
-             (error "No gptel backend configured"))
+         :prompt (concat
+                  gptel-commit-message-prompt
+                  "\n\n---Git diff---\n"
+                  (gptel-commit-message--get-diff))
+         :backend (or gptel-commit-message-backend
+                      gptel-backend
+                      (error "No gptel backend configured"))
          :buffer buffer
          :position position))
-    (error
-     (gptel-commit-message--handle-error err))))
+    (error (gptel-commit-message--handle-error err))))
 
 (defun gptel-commit-message--get-diff ()
   "Get the git diff for the current repository.
@@ -168,7 +167,8 @@ Respect `gptel-commit-message-use-staged-changes'."
            '("diff" "HEAD~1" "HEAD"))))
     (if gptel-commit-message-excluded-globs
         (append
-         base-args '("--" ".")
+         base-args
+         '("--" ".")
          (mapcar
           #'gptel-commit-message--exclude-pathspec
           gptel-commit-message-excluded-globs))
@@ -179,23 +179,23 @@ Respect `gptel-commit-message-use-staged-changes'."
   (format ":(glob,exclude)%s" glob))
 
 (cl-defun
- gptel-commit-message--request
- (&key prompt backend buffer position)
- "Send PROMPT to BACKEND for BUFFER at POSITION."
- (let ((state (gptel-commit-message--make-request-state position))
-       (gptel-backend backend)
-       (gptel-stream t))
-   (gptel-request
-    prompt
-    :buffer buffer
-    :stream t
-    :callback
-    (lambda (response info)
-      (setq state
-            (gptel-commit-message--request-handler
-             state response info))
-      (gptel-commit-message--handle-response
-       response info buffer state)))))
+    gptel-commit-message--request
+    (&key prompt backend buffer position)
+  "Send PROMPT to BACKEND for BUFFER at POSITION."
+  (let ((state (gptel-commit-message--make-request-state position))
+        (gptel-backend backend)
+        (gptel-stream t))
+    (gptel-request
+        prompt
+      :buffer buffer
+      :stream t
+      :callback (lambda
+                  (response info)
+                  (setq state
+                        (gptel-commit-message--request-handler
+                         state response info))
+                  (gptel-commit-message--handle-response
+                   response info buffer state)))))
 
 (defun gptel-commit-message--make-request-state (position)
   "Create request state beginning at POSITION."
@@ -217,7 +217,8 @@ Responses containing reasoning or control messages are ignored."
   (pcase response
     ((pred stringp)
      (gptel-commit-message--append-chunk state response))
-    (`(reasoning . ,_) state)
+    (`(reasoning . ,_)
+     state)
     (_ state)))
 
 (defun gptel-commit-message--append-chunk (state chunk)
@@ -234,12 +235,12 @@ Responses containing reasoning or control messages are ignored."
                      'gptel-commit-message-streaming-face))
         (set-marker content-end (point) buf)
         (gptel-commit-message--render-indicator state))))
-  (setf (plist-get state :chunks)
-        (cons chunk (plist-get state :chunks)))
+  (setf
+   (plist-get state :chunks)
+   (cons chunk (plist-get state :chunks)))
   state)
 
-(defun gptel-commit-message--handle-response
-    (response info buffer state)
+(defun gptel-commit-message--handle-response (response info buffer state)
   "Handle streamed RESPONSE and INFO for BUFFER using STATE."
   (condition-case err
       (cond
@@ -258,8 +259,7 @@ Responses containing reasoning or control messages are ignored."
        ((null response)
         (gptel-commit-message--fail-request
          :buffer buffer
-         :message
-         (or (plist-get info :status) "gptel request failed")
+         :message (or (plist-get info :status) "gptel request failed")
          :state state)))
     (error
      (gptel-commit-message--fail-request
@@ -276,8 +276,7 @@ Responses containing reasoning or control messages are ignored."
         (when (string-empty-p message)
           (error "gptel returned an empty response"))
         (when (buffer-live-p buffer)
-          (gptel-commit-message--replace-streamed-text
-           state message)))
+          (gptel-commit-message--replace-streamed-text state message)))
     (gptel-commit-message--release-state state)))
 
 (defun gptel-commit-message--replace-streamed-text (state message)
@@ -301,23 +300,24 @@ Responses containing reasoning or control messages are ignored."
 (defun gptel-commit-message--start-indicator (state)
   "Start the generation indicator for STATE."
   (gptel-commit-message--render-indicator state)
-  (setf (plist-get state :timer)
-        (run-with-timer
-         gptel-commit-message-indicator-interval
-         gptel-commit-message-indicator-interval
-         (lambda () (gptel-commit-message--tick-indicator state)))))
+  (setf
+   (plist-get state :timer)
+   (run-with-timer
+    gptel-commit-message-indicator-interval
+    gptel-commit-message-indicator-interval
+    (lambda () (gptel-commit-message--tick-indicator state)))))
 
 (defun gptel-commit-message--tick-indicator (state)
   "Advance and redraw the generation indicator for STATE."
   (when-let* ((content-end (plist-get state :content-end))
               (buf (marker-buffer content-end)))
-    (setf (plist-get state :indicator-index)
-          (mod
-           (1+ (plist-get state :indicator-index))
-           (length gptel-commit-message-generation-indicator)))
+    (setf
+     (plist-get state :indicator-index)
+     (mod
+      (1+ (plist-get state :indicator-index))
+      (length gptel-commit-message-generation-indicator)))
     (with-current-buffer buf
-      (save-excursion
-        (gptel-commit-message--render-indicator state)))))
+      (save-excursion (gptel-commit-message--render-indicator state)))))
 
 (defun gptel-commit-message--render-indicator (state)
   "Render the current generation indicator frame for STATE."
@@ -328,9 +328,10 @@ Responses containing reasoning or control messages are ignored."
       (save-excursion
         (goto-char content-end)
         (insert
-         (propertize (gptel-commit-message--indicator-frame state)
-                     'font-lock-face
-                     'gptel-commit-message-streaming-face))
+         (propertize
+          (gptel-commit-message--indicator-frame state)
+          'font-lock-face
+          'gptel-commit-message-streaming-face))
         (set-marker (plist-get state :indicator-end) (point) buf)))))
 
 (defun gptel-commit-message--delete-indicator (state)
@@ -359,18 +360,18 @@ Responses containing reasoning or control messages are ignored."
   (set-marker (plist-get state :indicator-end) nil))
 
 (cl-defun
- gptel-commit-message--fail-request
- (&key buffer message state)
- "Record MESSAGE as a request failure for BUFFER.
+    gptel-commit-message--fail-request
+    (&key buffer message state)
+  "Record MESSAGE as a request failure for BUFFER.
 
 Clear partial STATE when present."
- (when state
-   (unwind-protect
-       (when (buffer-live-p buffer)
-         (gptel-commit-message--clear-streamed-text state))
-     (gptel-commit-message--release-state state)))
- (setq gptel-commit-message-last-error message)
- (message "gptel-commit-message: %s" message))
+  (when state
+    (unwind-protect
+        (when (buffer-live-p buffer)
+          (gptel-commit-message--clear-streamed-text state))
+      (gptel-commit-message--release-state state)))
+  (setq gptel-commit-message-last-error message)
+  (message "gptel-commit-message: %s" message))
 
 (defun gptel-commit-message--handle-error (err)
   "Record and report ERR, then return nil."
