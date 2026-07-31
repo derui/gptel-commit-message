@@ -44,7 +44,7 @@
 
 FORMAT:
 <format>
-<type>(<module>): <description>
+<type>(<optional module>): <description>
 
 <optional commit body>
 
@@ -52,8 +52,13 @@ FORMAT:
 </format>
 
 RULES:
-- Always use a lowercase type and a parenthesized module: <type>(<module>): <description>.
-- Choose a short, meaningful module from the affected component, file, or area.
+- Always use a lowercase type.
+- Review the recent commit subjects supplied with the diff to determine
+  whether this repository conventionally uses scopes. Use
+  `<type>(<module>): <description>` only when scopes are used; otherwise use
+  `<type>: <description>`.
+- When using a scope, choose a short, meaningful module from the affected
+  component, file, or area.
 - Keep the description imperative, simple, and under 50 characters when possible.
 - Do not end the description with a period.
 - Use a body only when the change is complex or needs useful context. Wrap body lines at 72 characters.
@@ -83,7 +88,7 @@ EXAMPLES:
 (defcustom gptel-commit-message-prompt
   gptel-commit-message-conventional-prompt
   "The prompt template used to generate commit messages.
-This is sent to gptel along with the git diff."
+This is sent to gptel with recent commit subjects and the git diff."
   :type 'string
   :group 'gptel-commit-message)
 
@@ -130,22 +135,40 @@ The function analyzes the git diff and sends it to the LLM to generate
  `gptel-commit-message-last-error' for details."
   (interactive)
   (condition-case err
-      (let* ((buffer (current-buffer))
-             (position (copy-marker (point) t)))
+      (progn
         (setq gptel-commit-message-last-error nil)
+
         (gptel-commit-message--request
-         :prompt (concat
-                  gptel-commit-message-prompt
-                  "\n\n---Git diff---\n"
-                  (gptel-commit-message--get-diff))
+         :prompt (gptel-commit-message--build-prompt
+                  (gptel-commit-message--git-root))
          :backend (or gptel-commit-message-backend
                       gptel-backend
                       (error "No gptel backend configured"))
-         :buffer buffer
-         :position position))
+         :buffer (current-buffer)
+         :position (copy-marker (point) t))
+        )
     (error (gptel-commit-message--handle-error err))))
 
-(defun gptel-commit-message--get-diff ()
+(defun gptel-commit-message--git-root ()
+  "Return the Git repository root for the current buffer."
+  (vc-git-root (or (buffer-file-name) default-directory)))
+
+(defun gptel-commit-message--build-prompt (root)
+  "Build the generation prompt for the repository at ROOT."
+  (concat
+   gptel-commit-message-prompt
+   "\n\n---Recent commit subjects---\n"
+   (gptel-commit-message--get-recent-commit-subjects root)
+   "\n---Git diff---\n"
+   (gptel-commit-message--get-diff root)))
+
+(defun gptel-commit-message--get-recent-commit-subjects (root)
+  "Return the five most recent commit subjects from ROOT."
+  (with-temp-buffer
+    (vc-git-command t nil root "log" "-5" "--format=%s")
+    (buffer-string)))
+
+(defun gptel-commit-message--get-diff (&optional root)
   "Get the git diff for the current repository.
 
 Return the diff as a string.
@@ -156,7 +179,7 @@ Respect `gptel-commit-message-use-staged-changes'."
      (apply #'vc-git-command
             t
             nil
-            (vc-git-root (or (buffer-file-name) default-directory))
+            (or root (gptel-commit-message--git-root))
             (gptel-commit-message--diff-args))
      (buffer-string))))
 

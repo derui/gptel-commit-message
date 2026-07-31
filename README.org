@@ -16,6 +16,7 @@ This package integrates [[https://github.com/karthink/gptel][gptel]] with git to
 - Support for both staged changes and committed diffs
 - Exclude files from the diff with configurable globs
 - Follows conventional commits format
+- Adapts commit scopes to the target repository's recent commit messages
 
 * Installation
 - Emacs 30.1 or later
@@ -137,9 +138,9 @@ repository root.
 
 * How It Works
 
-1. **Fetch Diff**: Retrieves the git diff from staged changes (or committed changes if configured), excluding any matching globs
+1. **Fetch History and Diff**: Retrieves the target repository's five most recent commit subjects and the git diff from staged changes (or committed changes if configured), excluding any matching globs
 2. **Truncate if Needed**: Respects size limits to avoid excessive API usage
-3. **Send to LLM**: Sends the diff and prompt through gptel's streaming request API
+3. **Send to LLM**: Sends the commit subjects, diff, and prompt through gptel's streaming request API
 4. **Preview**: Streams partial output into the current buffer using a temporary face and animated indicator
 5. **Finalize**: Replaces the preview with the finalized message when the request completes
 
