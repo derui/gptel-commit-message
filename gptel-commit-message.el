@@ -40,42 +40,43 @@
   "Seconds between animation frames for the generation indicator.")
 
 (defconst gptel-commit-message-conventional-prompt
-  "Analyze this git diff and generate a concise, well-formatted commit message following conventional commits. Return ONLY the commit message without any explanation or code blocks.
+  "Analyze this git diff and generate a concise, well-formatted Conventional Commit message. Return ONLY the commit message without explanations, code blocks, or other output.
 
 FORMAT:
 <format>
-[type]: {description}
+<type>(<module>): <description>
 
-{commit body if necessary}
+<optional commit body>
 
-{breaking change section}
+<optional breaking change footer>
 </format>
 
-- Description should be less than 50 charactors as possible.
-- Must not add \`.\` in descrpition.
-- Each line of commit message body should be less than 72 charactors each line as possible.
-
 RULES:
-Do not add too descriptive message. Each description and message should be simple as possible.
-DO NOT ANY OTHER OUTPUT WITHOUT FORMAT. No need to your thinking, prefix, suffix.
+- Always use a lowercase type and a parenthesized module: <type>(<module>): <description>.
+- Choose a short, meaningful module from the affected component, file, or area.
+- Keep the description imperative, simple, and under 50 characters when possible.
+- Do not end the description with a period.
+- Use a body only when the change is complex or needs useful context. Wrap body lines at 72 characters.
+- For breaking changes, add a `BREAKING CHANGE: <description>` footer.
+- Do not include reasoning, prefixes, suffixes, or any text outside the commit message.
 
-Use conventional commit message. Must prefix <type>: with follows:
+TYPES:
+- feat: add a feature
+- fix: fix a bug
+- perf: improve performance
+- refactor: change design or architecture
+- docs: change documentation
+- style: make formatting-only changes
+- test: add or update tests
+- chore: perform uncategorized maintenance
+- ci: change CI configuration
+- build: change build configuration or dependencies
 
-- feat :: making feature
-- fix :: fix some bug
-- perf :: performance concerns
-- refactor :: change design, or architecture
-- docs :: changes only document
-- chore :: some works not in category
-- ci :: changes for CI
-- build :: changes for build
-
-FORMAT:
-When changes are simple or only one function, generate only single line, with type and description.
-When changes are complex or large, generate more detailed comment.
-
-BERAKING CHANGE:
-When the changes contained breaking change, it must be in footer under `BREAKING CHANGE:' section.
+EXAMPLES:
+- style(format): format
+- refactor(prompt): update commit message output rules
+- docs(package): update package requirements
+- docs(readme): improve documents
 "
   "Default prompt for generating conventional commit messages.")
 
