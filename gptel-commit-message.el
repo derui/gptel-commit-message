@@ -42,16 +42,18 @@
 (defconst gptel-commit-message-conventional-prompt
   "Analyze this git diff and generate a concise, well-formatted Conventional Commit message. Return ONLY the commit message without explanations, code blocks, or other output.
 
-FORMAT:
 <format>
+```
 <type>(<optional module>): <description>
 
 <optional commit body>
 
 <optional breaking change footer>
+```
 </format>
 
 RULES:
+- MUST REMOVE `<format>` TAG ON MESSAGE
 - Always use a lowercase type.
 - Review the recent commit subjects supplied with the diff to determine
   whether this repository conventionally uses scopes. Use
