@@ -40,9 +40,13 @@
   "Seconds between animation frames for the generation indicator.")
 
 (defconst gptel-commit-message-conventional-prompt
-  "Analyze this git diff and generate a concise, well-formatted Conventional Commit message. Return ONLY the commit message without explanations, code blocks, or other output.
+  "Analyze this git diff and generate a concise, well-formatted Conventional Commit message.
 
-<format>
+Return only the commit message as plain text. Do not include explanations,
+reasoning, code fences, XML-like tags, or any other surrounding text. In
+particular, never output `<format>` or `</format>`.
+
+Use this commit-message format:
 ```
 <type>(<optional module>): <description>
 
@@ -50,10 +54,9 @@
 
 <optional breaking change footer>
 ```
-</format>
 
-RULES:
-- MUST REMOVE `<format>` TAG ON MESSAGE
+Follow these rules:
+- Never include `<format>` or `</format>` in the output.
 - Always use a lowercase type.
 - Review the recent commit subjects supplied with the diff to determine
   whether this repository conventionally uses scopes. Use
@@ -67,7 +70,7 @@ RULES:
 - For breaking changes, add a `BREAKING CHANGE: <description>` footer.
 - Do not include reasoning, prefixes, suffixes, or any text outside the commit message.
 
-TYPES:
+Available types:
 - feat: add a feature
 - fix: fix a bug
 - perf: improve performance
@@ -79,7 +82,7 @@ TYPES:
 - ci: change CI configuration
 - build: change build configuration or dependencies
 
-EXAMPLES:
+Examples:
 - style(format): format
 - refactor(prompt): update commit message output rules
 - docs(package): update package requirements
